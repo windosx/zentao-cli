@@ -7,12 +7,15 @@ on:
 
 permissions:
   contents: write
+  # 允许工作流写入软件物料清单 (SBOM) 签名证明
+  id-token: write
+  attestations: write
 
 jobs:
   goreleaser:
     name: GoReleaser Release
     # windows-latest 预装 Chocolatey (choco)，可用于构建 Chocolatey 包；
-    # GoReleaser 支持在 Windows 上交叉编译所有平台 (darwin/linux/windows)。
+    # GoReleaser 支持在 Windows 上交叉编译所有平台 (darwin/linux/windows × amd64/arm64)。
     runs-on: windows-latest
     steps:
       - name: Checkout Code
@@ -26,7 +29,11 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Install syft (SBOM generator)
+        uses: anchore/sbom-action/download-syft@v0.18.0
+
       - name: Run GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
@@ -34,7 +41,20 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Homebrew / Winget 仓库推送 token（首次发布未配置时置空跳过）
+          # Homebrew / Winget 仓库推送 token（未配置时对应配置块 skip_upload: true）
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+      # 对校验和与 SBOM 进行签名背书，实现供应链安全 (对标 golangci-lint)
+      - name: Attest checksums
+        uses: actions/attest@v2
+        with:
+          subject-checksums: ./dist/zentao-cli-${{ fromJSON(steps.goreleaser.outputs.metadata).version }}-checksums.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attest digests (SBOM)
+        uses: actions/attest@v2
+        with:
+          subject-checksums: ./dist/digests.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}

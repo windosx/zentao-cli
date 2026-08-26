@@ -27,15 +27,23 @@ builds:
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
+
+# 源码包：便于 go install / go get 及审计构建
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Version }}-source'
+
+# 软件物料清单 (SBOM)，对标成熟开源项目供应链实践
+sboms:
+  - id: archive
+    artifacts: archive
 
 archives:
   - id: default
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}'
     formats:
       - tar.gz
+    wrap_in_directory: true
     format_overrides:
       - goos: windows
         formats:
@@ -45,10 +53,11 @@ archives:
       - LICENSE*
       - skills/**/*
 
-# 1. Linux DEB / RPM 包构建 (NFPM)
+# 1. Linux DEB / RPM 包 (APT / DNF 源)
 nfpms:
   - id: zentao-cli
     package_name: zentao-cli
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     vendor: windosx
     maintainer: "windosx <support@windosx.com>"
     homepage: "https://github.com/windosx/zentao-cli"
@@ -60,13 +69,24 @@ nfpms:
       - deb
       - rpm
     bindir: /usr/bin
-    contents:
-      - src: ./LICENSE
-        dst: /usr/share/doc/zentao-cli/copyright
-      - src: ./README.md
-        dst: /usr/share/doc/zentao-cli/README.md
+    umask: 0o022
+    overrides:
+      deb:
+        contents:
+          - src: ./LICENSE
+            dst: /usr/share/doc/zentao-cli/copyright
+          - src: ./README.md
+            dst: /usr/share/doc/zentao-cli/README.md
+      rpm:
+        contents:
+          - src: ./LICENSE
+            dst: /usr/share/doc/zentao-cli/LICENSE
+            type: license
+          - src: ./README.md
+            dst: /usr/share/doc/zentao-cli/README.md
+            type: readme
 
-# 2. Homebrew Tap (macOS / Linuxbrew) - v2 homebrew_casks
+# 2. Homebrew (macOS / Linux) - v2 homebrew_casks
 homebrew_casks:
   - name: zentao
     repository:
@@ -77,7 +97,7 @@ homebrew_casks:
     directory: Casks
     homepage: "https://github.com/windosx/zentao-cli"
     description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    # 首次发布尚未配置 windosx/homebrew-tap 仓库时置为 true，仅生成 cask 到 dist
+    # 配置 windosx/homebrew-tap 仓库及 token 后改为 false 以自动推送
     skip_upload: true
     commit_author:
       name: windosx-bot
@@ -105,7 +125,7 @@ winget:
       - cli
       - agent
       - project-management
-    # 仅在配置好 windosx/winget-pkgs 仓库 token 后改为 false 以自动推送
+    # 配置 windosx/winget-pkgs 仓库及 token 后改为 false 以自动推送
     skip_upload: true
     repository:
       owner: windosx
@@ -116,7 +136,7 @@ winget:
       name: windosx-bot
       email: bot@windosx.com
 
-# 4. Chocolatey for Windows
+# 4. Chocolatey for Windows (需在 windows-latest runner 上构建)
 chocolateys:
   - name: zentao-cli
     title: ZenTao CLI
@@ -133,15 +153,16 @@ chocolateys:
       ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
       Provides zero-auth persistent sessions and full workbench support.
     tags: "zentao zentao-cli cli sdk project-management agile"
-    # 打包依赖 choco，仅在 Windows runner 上可用（release.yml 使用 windows-latest）。
-    # skip_publish: true 只生成 .nupkg 到 dist，不推送 Chocolatey 仓库（无需 API key）。
-    # 推送时改为 false 并提供 CHOCOLATEY_API_KEY。
+    # 仅生成 nupkg 到 dist；配置 CHOCOLATEY_API_KEY 并改为 false 后自动推送
     skip_publish: true
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
 
+snapshot:
+  version_template: SNAPSHOT-{{ .Commit }}
+
 checksum:
-  name_template: "checksums.txt"
+  name_template: '{{ .ProjectName }}-{{ .Version }}-checksums.txt'
   algorithm: sha256
 
 changelog:
@@ -149,11 +170,11 @@ changelog:
   use: github
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
-      - "Merge pull request"
-      - "Merge branch"
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
   groups:
     - title: "Features"
       regexp: '^feat[(\w)]*:+.*$'
@@ -174,6 +195,12 @@ release:
   github:
     owner: windosx
     name: zentao-cli
+  header: |
+    ## zentao-cli {{ .Version }}
+
+    `zentao-cli` 是面向 AI Agent 与现代开发者的禅道 (ZenTao PMS) 命令行工具与 Go SDK。
+
+    安装方式详见 [README](https://github.com/windosx/zentao-cli#readme)。
   draft: false
   prerelease: auto
   mode: replace
