@@ -1,8 +1,8 @@
 # Binaries and build output
 bin/
 dist/
-zentao
-zentao-cli
+/zentao
+/zentao-cli
 
 # Configurations and sessions
 .zentao.yaml

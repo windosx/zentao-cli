@@ -43,7 +43,7 @@ archives:
       - LICENSE*
       - skills/**/*
 
-# 1. Linux DEB / APT 包构建 (NFPM)
+# 1. Linux DEB / RPM 包构建 (NFPM)
 nfpms:
   - id: zentao-cli
     package_name: zentao-cli
@@ -167,6 +167,8 @@ changelog:
 
 release:
   github:
-    draft: false
-    prerelease: auto
-    mode: replace
+    owner: windosx
+    name: zentao-cli
+  draft: false
+  prerelease: auto
+  mode: replace
