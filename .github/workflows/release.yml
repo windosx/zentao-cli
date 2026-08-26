@@ -55,7 +55,7 @@ jobs:
         with:
           subject-checksums: ./dist/zentao-cli-${{ fromJSON(steps.goreleaser.outputs.metadata).version }}-checksums.txt
           predicate-type: https://slsa.dev/provenance/v1
-          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"},"buildType":"https://goreleaser.com"}}'
+          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"}}'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attest digests (SBOM)
@@ -65,5 +65,5 @@ jobs:
         with:
           subject-checksums: ./dist/digests.txt
           predicate-type: https://slsa.dev/provenance/v1
-          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"},"buildType":"https://goreleaser.com"}}'
+          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"}}'
           github-token: ${{ secrets.GITHUB_TOKEN }}
