@@ -1,0 +1,172 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: zentao-cli
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: zentao
+    binary: zentao
+    main: ./main.go
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X github.com/windosx/zentao-cli/cmd.Version={{.Version}}
+      - -X github.com/windosx/zentao-cli/cmd.GitCommit={{.Commit}}
+      - -X github.com/windosx/zentao-cli/cmd.BuildDate={{.Date}}
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - skills/**/*
+
+# 1. Linux DEB / APT 包构建 (NFPM)
+nfpms:
+  - id: zentao-cli
+    package_name: zentao-cli
+    vendor: windosx
+    maintainer: "windosx <support@windosx.com>"
+    homepage: "https://github.com/windosx/zentao-cli"
+    description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
+    license: MIT
+    section: utils
+    priority: optional
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/zentao-cli/copyright
+      - src: ./README.md
+        dst: /usr/share/doc/zentao-cli/README.md
+
+# 2. Homebrew Tap (macOS / Linuxbrew)
+brews:
+  - name: zentao-cli
+    repository:
+      owner: windosx
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/windosx/zentao-cli"
+    description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
+    license: MIT
+    commit_author:
+      name: windosx-bot
+      email: bot@windosx.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    install: |
+      bin.install "zentao"
+    test: |
+      system "#{bin}/zentao", "version"
+
+# 3. Windows Package Manager (WinGet)
+winget:
+  - name: zentao-cli
+    package_name: zentao-cli
+    package_identifier: windosx.zentao-cli
+    publisher: windosx
+    publisher_url: "https://github.com/windosx"
+    homepage: "https://github.com/windosx/zentao-cli"
+    license: MIT
+    license_url: "https://github.com/windosx/zentao-cli/blob/main/LICENSE"
+    short_description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
+    description: |
+      ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
+      Provides zero-auth persistent sessions and full workbench support.
+    tags:
+      - zentao
+      - zentao-cli
+      - cli
+      - agent
+      - project-management
+    repository:
+      owner: windosx
+      name: winget-pkgs
+      branch: main
+      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
+    commit_author:
+      name: windosx-bot
+      email: bot@windosx.com
+
+# 4. Chocolatey for Windows
+chocolateys:
+  - name: zentao-cli
+    title: ZenTao CLI
+    owners: windosx
+    authors: windosx
+    project_url: "https://github.com/windosx/zentao-cli"
+    project_source_url: "https://github.com/windosx/zentao-cli"
+    docs_url: "https://github.com/windosx/zentao-cli#readme"
+    bug_tracker_url: "https://github.com/windosx/zentao-cli/issues"
+    license_url: "https://github.com/windosx/zentao-cli/blob/main/LICENSE"
+    require_license_acceptance: false
+    summary: "ZenTao PMS CLI and Go SDK"
+    description: |
+      ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
+      Provides zero-auth persistent sessions and full workbench support.
+    tags: "zentao zentao-cli cli sdk project-management agile"
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    source_repo: "https://push.chocolatey.org/"
+    skip_publish: false
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "Features"
+      regexp: '^feat[(\w)]*:+.*$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^fix[(\w)]*:+.*$'
+      order: 1
+    - title: "Performance Improvements"
+      regexp: '^perf[(\w)]*:+.*$'
+      order: 2
+    - title: "Maintenance & Refactor"
+      regexp: '^(refactor|style)[(\w)]*:+.*$'
+      order: 3
+    - title: "Other Changes"
+      order: 999
+
+release:
+  github:
+    draft: false
+    prerelease: auto
+    mode: replace

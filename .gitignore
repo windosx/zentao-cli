@@ -1,0 +1,26 @@
+# Binaries and build output
+bin/
+dist/
+zentao
+zentao-cli
+
+# Configurations and sessions
+.zentao.yaml
+.zentao.yml
+.session.json
+*.local.yaml
+
+# OS and IDE
+.DS_Store
+.idea/
+.vscode/
+.zcode/
+.pi/
+*.swp
+
+# Coverage and test artifacts
+*.out
+*.html
+*.test
+coverage.html
+coverage.out

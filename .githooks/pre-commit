@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+echo "==> Running Git Pre-Commit Quality Checks..."
+
+# 1. Run all linter & formatting checks via golangci-lint
+if command -v golangci-lint >/dev/null 2>&1; then
+    echo "--> Running golangci-lint..."
+    golangci-lint run ./...
+else
+    echo "Warning: golangci-lint not found in PATH, skipping."
+fi
+
+# 2. Run unit tests with race detector
+echo "--> Running unit tests with race detector..."
+go test -race ./...
+
+echo "==> All pre-commit checks passed successfully!"
