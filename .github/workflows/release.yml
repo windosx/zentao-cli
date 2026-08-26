@@ -51,10 +51,12 @@ jobs:
         uses: actions/attest@v2
         with:
           subject-checksums: ./dist/zentao-cli-${{ fromJSON(steps.goreleaser.outputs.metadata).version }}-checksums.txt
+          predicate-type: https://slsa.dev/provenance/v1
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attest digests (SBOM)
         uses: actions/attest@v2
         with:
           subject-checksums: ./dist/digests.txt
+          predicate-type: https://slsa.dev/provenance/v1
           github-token: ${{ secrets.GITHUB_TOKEN }}
