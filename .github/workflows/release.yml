@@ -46,16 +46,15 @@ jobs:
           WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
 
-      # 对校验和与 SBOM 进行签名背书（供应链安全，对标 golangci-lint）。
-      # 即使 attestation 失败也不阻塞发布主流程，保证 tag 发布稳定。
+      # SLSA Provenance 自动生成模式：不传 predicate-type/predicate，
+      # actions/attest 自动生成合规的 SLSA v1 provenance 并签名。
+      # continue-on-error 保证即使 attestation 失败也不阻塞 tag 发布。
       - name: Attest checksums
         if: always()
         continue-on-error: true
         uses: actions/attest@v2
         with:
           subject-checksums: ./dist/zentao-cli-${{ fromJSON(steps.goreleaser.outputs.metadata).version }}-checksums.txt
-          predicate-type: https://slsa.dev/provenance/v1
-          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"}}'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attest digests (SBOM)
@@ -64,6 +63,4 @@ jobs:
         uses: actions/attest@v2
         with:
           subject-checksums: ./dist/digests.txt
-          predicate-type: https://slsa.dev/provenance/v1
-          predicate: '{"builder":{"id":"https://github.com/windosx/zentao-cli/.github/workflows/release.yml@refs/tags/${{ github.ref_name }}"}}'
           github-token: ${{ secrets.GITHUB_TOKEN }}
