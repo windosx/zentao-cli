@@ -44,7 +44,8 @@ func TestVersionCmd(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !bytes.Contains([]byte(out), []byte(`"version": "1.0.0"`)) {
+	expectedVersion := resolveVersion()
+	if !bytes.Contains([]byte(out), []byte(`"version": "`+expectedVersion+`"`)) {
 		t.Errorf("unexpected version output: %s", out)
 	}
 	if !bytes.Contains([]byte(out), []byte(`"sdkVersion": "zentaopms_21.7_20250516"`)) {

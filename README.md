@@ -67,41 +67,43 @@
 
 ## 📦 安装指南
 
-> **提示**：本项目名为 **`zentao-cli`**，安装后在终端直接使用可执行命令 **`zentao`**。
+> **提示**：本项目名为 **`zentao-cli`**，可执行制品名统一为 **`zentao`**（brew/winget/choco/deb 安装后直接使用 `zentao` 命令；`go install` 因 Go 工具链按模块名命名，安装为 `zentao-cli`，可加一条 alias）。
 
 ### 1. macOS / Linux (Homebrew)
 ```bash
-# 添加官方 Tap 并安装
 brew install windosx/homebrew-tap/zentao-cli
-
-# 或分步添加
-brew tap windosx/homebrew-tap
-brew install zentao-cli
+# 或分步：brew tap windosx/homebrew-tap && brew install zentao-cli
+# 安装后直接使用：zentao
 ```
 
 ### 2. Windows (WinGet / Chocolatey)
 ```powershell
-# 方式 A：通过 WinGet (Windows 10/11 官方推荐)
+# 方式 A：WinGet (Windows 10/11 官方推荐)
 winget install windosx.zentao-cli
 
-# 方式 B：通过 Chocolatey
+# 方式 B：Chocolatey
 choco install zentao-cli
+
+# 安装后直接使用：zentao
 ```
 
 ### 3. Linux (Debian / Ubuntu / APT)
 ```bash
-# 下载对应架构的 deb 安装包并使用 apt 安装
-sudo apt-get update
+# 下载对应架构的 deb 安装包并使用 apt 安装 (amd64 / arm64)
 sudo apt-get install ./zentao-cli_*_linux_amd64.deb
-
-# 或者使用 dpkg 安装
-sudo dpkg -i zentao-cli_*_linux_amd64.deb
+# 安装后直接使用：zentao
 ```
 
 ### 4. 通过 Go Install 安装
 ```bash
+# 安装（Go 工具链按模块名生成二进制，安装为 zentao-cli）
 go install github.com/windosx/zentao-cli@latest
+
+# 建议添加 alias 以统一使用 zentao 命令
+# 在 ~/.zshrc 或 ~/.bashrc 中加入：
+alias zentao=zentao-cli
 ```
+> `go install` 构建的版本信息会从模块元数据自动读取（如 `v1.0.5`），与 GitHub Releases 中 goreleaser 注入的版本保持一致。
 
 ### 5. 下载预编译二进制 (GitHub Releases)
 前往 [GitHub Releases](https://github.com/windosx/zentao-cli/releases) 下载适用于你操作系统的 tar.gz / zip 压缩包，解压后将 `zentao` 移动至系统 `PATH` 目录即可。
