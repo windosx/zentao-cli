@@ -12,7 +12,7 @@ var schemaCmd = &cobra.Command{
 	Short: "探测命令与参数元数据 Schema（专供 AI Agent 工具发现）",
 	Long:  "以结构化 JSON 输出命令定义、必填/选填参数、数据类型、操作风险/副作用与使用示例，支持 AI Agent 进行动态 Tool Calling 发现。",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var targetCmd *cobra.Command = RootCmd
+		targetCmd := RootCmd
 		if len(args) > 0 {
 			targetCmd = findSubcommand(RootCmd, args)
 			if targetCmd == nil {

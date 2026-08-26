@@ -24,8 +24,8 @@ type Profile struct {
 
 // Store holds multiple named profiles and points to the currently active profile.
 type Store struct {
-	ActiveProfile string              `json:"active_profile"`
 	Profiles      map[string]*Profile `json:"profiles"`
+	ActiveProfile string              `json:"active_profile"`
 }
 
 var storeMu sync.Mutex

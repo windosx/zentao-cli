@@ -3,9 +3,9 @@ set -e
 
 echo "==> Running Git Pre-Commit Quality Checks..."
 
-# 1. Run all linter & formatting checks via golangci-lint
+# 1. Run all linter & formatting checks via golangci-lint v2
 if command -v golangci-lint >/dev/null 2>&1; then
-    echo "--> Running golangci-lint..."
+    echo "--> Running golangci-lint v2..."
     golangci-lint run ./...
 else
     echo "Warning: golangci-lint not found in PATH, skipping."

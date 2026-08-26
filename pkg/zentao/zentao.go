@@ -44,17 +44,17 @@ type Config struct {
 // Client is a ZenTao API client. Create one with New, then call Login before
 // any endpoint method (Login is also invoked once per CLI invocation).
 type Client struct {
-	BaseURL    string
-	Account    string
-	Password   string
-	AccessMode string
-
 	HTTP   *http.Client
 	Cookie string // sessionName=sessionID, from getSessionID
 	rand   string // session random number, used by addUser password encryption
 
 	// OnSessionRefreshed callback triggered whenever the session is automatically refreshed.
 	OnSessionRefreshed func(cookie, rand string)
+
+	BaseURL    string
+	Account    string
+	Password   string
+	AccessMode string
 }
 
 // New builds a Client from Config.

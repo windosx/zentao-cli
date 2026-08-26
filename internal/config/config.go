@@ -20,9 +20,9 @@ type Options struct {
 	Account    string `json:"account" yaml:"account"`
 	Password   string `json:"password" yaml:"password"`
 	AccessMode string `json:"accessMode" yaml:"accessMode"`
-	Insecure   bool   `json:"insecure" yaml:"insecure"`
 	Output     string `json:"output" yaml:"output"`
 	Timeout    string `json:"timeout" yaml:"timeout"`
+	Insecure   bool   `json:"insecure" yaml:"insecure"`
 }
 
 // SessionCache holds cached session data to avoid redundant logins.

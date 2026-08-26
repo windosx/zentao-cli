@@ -18,11 +18,16 @@ import (
 type Format string
 
 const (
-	FormatJSON    Format = "json"
+	// FormatJSON renders the unified ok/outcome/data envelope.
+	FormatJSON Format = "json"
+	// FormatRawJSON renders the raw payload without an envelope.
 	FormatRawJSON Format = "raw-json"
-	FormatYAML    Format = "yaml"
-	FormatTable   Format = "table"
-	FormatText    Format = "text"
+	// FormatYAML renders the response as YAML.
+	FormatYAML Format = "yaml"
+	// FormatTable renders list responses as aligned ASCII columns.
+	FormatTable Format = "table"
+	// FormatText renders single-line plain-text summaries.
+	FormatText Format = "text"
 )
 
 // Standard exit codes for Agent & CLI invocation.
@@ -58,9 +63,9 @@ type ErrorInfo struct {
 
 // Printer handles formatted output to specified writers.
 type Printer struct {
-	Format Format
 	Out    io.Writer
 	Err    io.Writer
+	Format Format
 }
 
 // New creates a Printer with default stdout/stderr and normalized format.
@@ -152,18 +157,18 @@ func (p *Printer) Fail(code int, category, message string, details any) {
 		_ = encoder.Encode(resp)
 		_, _ = fmt.Fprint(p.Err, buf.String())
 	case FormatTable, FormatText:
-		fmt.Fprintf(p.Err, "Error [%s]: %s\n", category, message)
+		_, _ = fmt.Fprintf(p.Err, "Error [%s]: %s\n", category, message)
 		if details != nil {
-			fmt.Fprintf(p.Err, "Details: %v\n", details)
+			_, _ = fmt.Fprintf(p.Err, "Details: %v\n", details)
 		}
 	case FormatRawJSON, FormatJSON:
 		fallthrough
 	default:
 		encoded, err := json.MarshalIndent(resp, "", "  ")
 		if err == nil {
-			fmt.Fprintln(p.Err, string(encoded))
+			_, _ = fmt.Fprintln(p.Err, string(encoded))
 		} else {
-			fmt.Fprintf(p.Err, `{"ok":false,"outcome":"failure","error":{"code":%d,"category":%q,"message":%q}}`+"\n", code, category, message)
+			_, _ = fmt.Fprintf(p.Err, `{"ok":false,"outcome":"failure","error":{"code":%d,"category":%q,"message":%q}}`+"\n", code, category, message)
 		}
 	}
 }
@@ -216,12 +221,12 @@ func (p *Printer) printText(data any) error {
 			v := m[k]
 			if vMap, isMap := v.(map[string]any); isMap {
 				b, _ := json.Marshal(vMap)
-				fmt.Fprintf(p.Out, "%s: %s\n", k, string(b))
+				_, _ = fmt.Fprintf(p.Out, "%s: %s\n", k, string(b))
 			} else if vSlice, isSlice := v.([]any); isSlice {
 				b, _ := json.Marshal(vSlice)
-				fmt.Fprintf(p.Out, "%s: %s\n", k, string(b))
+				_, _ = fmt.Fprintf(p.Out, "%s: %s\n", k, string(b))
 			} else {
-				fmt.Fprintf(p.Out, "%s: %v\n", k, v)
+				_, _ = fmt.Fprintf(p.Out, "%s: %v\n", k, v)
 			}
 		}
 		return nil
@@ -247,12 +252,12 @@ func (p *Printer) printTable(data any) error {
 
 func (p *Printer) renderKeyValueTable(m map[string]any) error {
 	if len(m) == 0 {
-		fmt.Fprintln(p.Out, "(empty)")
+		_, _ = fmt.Fprintln(p.Out, "(empty)")
 		return nil
 	}
 	w := tabwriter.NewWriter(p.Out, 0, 0, 4, ' ', 0)
-	fmt.Fprintln(w, "KEY\tVALUE")
-	fmt.Fprintln(w, "---\t-----")
+	_, _ = fmt.Fprintln(w, "KEY\tVALUE")
+	_, _ = fmt.Fprintln(w, "---\t-----")
 
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -274,27 +279,27 @@ func (p *Printer) renderKeyValueTable(m map[string]any) error {
 				valStr = fmt.Sprint(val)
 			}
 		}
-		fmt.Fprintf(w, "%s\t%s\n", k, valStr)
+		_, _ = fmt.Fprintf(w, "%s\t%s\n", k, valStr)
 	}
 	return w.Flush()
 }
 
 func (p *Printer) renderTableSlice(items []map[string]any, itemType string) error {
 	if len(items) == 0 {
-		fmt.Fprintln(p.Out, "(empty list)")
+		_, _ = fmt.Fprintln(p.Out, "(empty list)")
 		return nil
 	}
 
 	headers, keys := chooseColumns(items, itemType)
 
 	w := tabwriter.NewWriter(p.Out, 0, 0, 4, ' ', 0)
-	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	_, _ = fmt.Fprintln(w, strings.Join(headers, "\t"))
 
 	seps := make([]string, len(headers))
 	for i, h := range headers {
 		seps[i] = strings.Repeat("-", maxInt(len(h), 3))
 	}
-	fmt.Fprintln(w, strings.Join(seps, "\t"))
+	_, _ = fmt.Fprintln(w, strings.Join(seps, "\t"))
 
 	for _, item := range items {
 		row := make([]string, len(keys))
@@ -306,7 +311,7 @@ func (p *Printer) renderTableSlice(items []map[string]any, itemType string) erro
 				row[i] = strings.ReplaceAll(fmt.Sprint(val), "\t", " ")
 			}
 		}
-		fmt.Fprintln(w, strings.Join(row, "\t"))
+		_, _ = fmt.Fprintln(w, strings.Join(row, "\t"))
 	}
 	return w.Flush()
 }

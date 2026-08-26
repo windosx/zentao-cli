@@ -73,7 +73,7 @@ func copySkillFile(embeddedRelPath, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	tmpPath := fmt.Sprintf("%s.tmp", destPath)
 	dst, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)

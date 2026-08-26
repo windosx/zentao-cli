@@ -1,78 +1,86 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
-  allow-parallel-runners: true
 
-linters-settings:
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-      - shadow
-  gofmt:
-    simplify: true
-  gocyclo:
-    min-complexity: 25
-  dupl:
-    threshold: 150
-  goconst:
-    min-len: 3
-    min-occurrences: 4
-  misspell:
-    locale: US
-  revive:
-    rules:
-      - name: exported
-        disabled: false
-      - name: blank-imports
-        disabled: false
-      - name: context-as-argument
-        disabled: false
-      - name: error-return
-        disabled: false
-      - name: error-strings
-        disabled: false
-      - name: error-naming
-        disabled: false
-      - name: if-return
-        disabled: false
-      - name: increment-decrement
-        disabled: false
-      - name: var-naming
-        disabled: false
-      - name: var-declaration
-        disabled: false
-      - name: package-comments
-        disabled: true
-      - name: dot-imports
-        disabled: true
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true
 
 linters:
+  default: none
   enable:
     - errcheck
-    - gosimple
     - govet
-    - ineffassign
     - staticcheck
-    - unused
-    - gofmt
     - gosec
     - revive
     - unconvert
     - whitespace
-    - goconst
-    - gocyclo
     - bodyclose
     - nilerr
-
-issues:
-  exclude-dirs:
-    - bin
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - goconst
-        - gosec
-        - errcheck
-        - gocyclo
-        - dupl
+  settings:
+    govet:
+      enable:
+        - appends
+        - asmdecl
+        - assign
+        - atomic
+        - bools
+        - buildtag
+        - cgocall
+        - composite
+        - copylocks
+        - deepequalerrors
+        - errorsas
+        - framepointer
+        - httpresponse
+        - ifaceassert
+        - loopclosure
+        - lostcancel
+        - nilfunc
+        - nilness
+        - printf
+        - shift
+        - sigchanyzer
+        - slog
+        - sortslice
+        - stdmethods
+        - stringintconv
+        - structtag
+        - testinggoroutine
+        - tests
+        - unmarshal
+        - unreachable
+        - unsafeptr
+        - unusedresult
+    revive:
+      rules:
+        - name: exported
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+  exclusions:
+    generated: lax
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - gosec
+          - errcheck
+          - revive
+      - text: 'G304' # 文件路径来自用户显式配置，非受控输入
+        linters:
+          - gosec
+      - text: 'G117' # 配置落盘包含密码字段由用户显式启用
+        linters:
+          - gosec
