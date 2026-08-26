@@ -71,8 +71,9 @@
 
 ### 1. macOS / Linux (Homebrew)
 ```bash
-brew install windosx/homebrew-tap/zentao-cli
-# 或分步：brew tap windosx/homebrew-tap && brew install zentao-cli
+# 安装（tap 仓库 homebrew-tap 自动映射为短名 windosx/tap）
+brew install windosx/tap/zentao-cli
+
 # 安装后直接使用：zentao
 ```
 
