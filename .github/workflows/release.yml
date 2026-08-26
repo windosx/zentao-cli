@@ -47,12 +47,12 @@ jobs:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
 
       # SLSA Provenance 自动生成模式：不传 predicate-type/predicate，
-      # actions/attest 自动生成合规的 SLSA v1 provenance 并签名。
+      # actions/attest@v4 自动生成合规的 SLSA v1 provenance 并签名。
       # continue-on-error 保证即使 attestation 失败也不阻塞 tag 发布。
       - name: Attest checksums
         if: always()
         continue-on-error: true
-        uses: actions/attest@v2
+        uses: actions/attest@v4
         with:
           subject-checksums: ./dist/zentao-cli-${{ fromJSON(steps.goreleaser.outputs.metadata).version }}-checksums.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -60,7 +60,7 @@ jobs:
       - name: Attest digests (SBOM)
         if: always()
         continue-on-error: true
-        uses: actions/attest@v2
+        uses: actions/attest@v4
         with:
           subject-checksums: ./dist/digests.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
