@@ -343,6 +343,28 @@ make coverage
 make install-hooks
 ```
 
+### 🔐 安全运行集成测试（凭据注入）
+
+集成测试会真实连接禅道服务器并自动清理测试数据。**凭据绝不硬编码进代码或 README**，按以下优先级安全注入：
+
+1. **环境变量**（CI / 临时场景推荐）：
+   ```bash
+   ZENTAO_TEST_URL=https://zentao.example.com \
+   ZENTAO_TEST_ACCOUNT=your-account \
+   ZENTAO_TEST_PASSWORD=your-password \
+   make test-integration
+   ```
+2. **本地 `.env` 文件**（开发便利）：
+   ```bash
+   cp .env.example .env   # 填入真实测试凭据
+   make test-integration
+   ```
+   > `.env` 已被 `.gitignore` 排除，**绝不会进入 git 版本库**；仓库中仅保留 `.env.example` 占位模板。
+3. **本地持久化 Profile**（最便捷）：
+   - 已通过 `zentao auth login` 保存的 `~/.config/zentao/profiles.json`（位于用户目录，天然不进 git），测试自动复用其凭据。
+
+> ⚠️ **安全红线**：任何真实账号、密码、内网地址**严禁**写入代码、README、测试文件或 `.env.example`。泄漏后应视为已泄露并立即轮换密码。
+
 ---
 
 ## 📄 开源许可证

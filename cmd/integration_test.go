@@ -17,7 +17,14 @@ import (
 )
 
 // getTestClient returns an authenticated client for integration testing against a live ZenTao server.
+//
+// 凭据注入优先级（全部安全，绝不硬编码）：
+//  1. 环境变量 ZENTAO_TEST_URL / ZENTAO_TEST_ACCOUNT / ZENTAO_TEST_PASSWORD
+//  2. 本地 .env 文件（不进 git，已被 .gitignore 排除）
+//  3. 本地持久化 profile（~/.config/zentao/profiles.json，位于用户目录，不进 git）
 func getTestClient(t *testing.T) *zentao.Client {
+	loadDotenvIfPresent()
+
 	url := os.Getenv("ZENTAO_TEST_URL")
 	account := os.Getenv("ZENTAO_TEST_ACCOUNT")
 	password := os.Getenv("ZENTAO_TEST_PASSWORD")
@@ -66,6 +73,30 @@ func execCmd(args ...string) (string, error) {
 		return errBuf.String(), err
 	}
 	return buf.String(), nil
+}
+
+// loadDotenvIfPresent 读取仓库根目录的 .env 文件（若存在）并注入环境变量。
+// .env 已被 .gitignore 排除，仅用于本地开发便利，绝不进入版本库。
+func loadDotenvIfPresent() {
+	data, err := os.ReadFile(".env")
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		kv := strings.SplitN(line, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(kv[0])
+		val := strings.Trim(strings.TrimSpace(kv[1]), `"'`)
+		if os.Getenv(key) == "" { // 已存在的环境变量优先
+			_ = os.Setenv(key, val)
+		}
+	}
 }
 
 // TestIntegration_FullLifecycle verifies all CLI commands against a live ZenTao server

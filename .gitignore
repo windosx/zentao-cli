@@ -10,6 +10,11 @@ dist/
 .session.json
 *.local.yaml
 
+# Secrets and local env files
+.env
+.env.*
+!.env.example
+
 # OS and IDE
 .DS_Store
 .idea/
