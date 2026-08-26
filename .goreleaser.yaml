@@ -34,10 +34,12 @@ builds:
 archives:
   - id: default
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     files:
       - README.md
       - LICENSE*
@@ -64,26 +66,24 @@ nfpms:
       - src: ./README.md
         dst: /usr/share/doc/zentao-cli/README.md
 
-# 2. Homebrew Tap (macOS / Linuxbrew)
-brews:
-  - name: zentao-cli
+# 2. Homebrew Tap (macOS / Linuxbrew) - v2 homebrew_casks
+homebrew_casks:
+  - name: zentao
     repository:
       owner: windosx
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
+    directory: Casks
     homepage: "https://github.com/windosx/zentao-cli"
     description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    license: MIT
+    # 首次发布尚未配置 windosx/homebrew-tap 仓库时置为 true，仅生成 cask 到 dist
+    skip_upload: true
     commit_author:
       name: windosx-bot
       email: bot@windosx.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    install: |
-      bin.install "zentao"
-    test: |
-      system "#{bin}/zentao", "version"
+    binaries:
+      - zentao
 
 # 3. Windows Package Manager (WinGet)
 winget:
@@ -105,6 +105,8 @@ winget:
       - cli
       - agent
       - project-management
+    # 仅在配置好 windosx/winget-pkgs 仓库 token 后改为 false 以自动推送
+    skip_upload: true
     repository:
       owner: windosx
       name: winget-pkgs
@@ -131,9 +133,12 @@ chocolateys:
       ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
       Provides zero-auth persistent sessions and full workbench support.
     tags: "zentao zentao-cli cli sdk project-management agile"
+    # 打包依赖 choco，仅在 Windows runner 上可用（release.yml 使用 windows-latest）。
+    # skip_publish: true 只生成 .nupkg 到 dist，不推送 Chocolatey 仓库（无需 API key）。
+    # 推送时改为 false 并提供 CHOCOLATEY_API_KEY。
+    skip_publish: true
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
-    skip_publish: false
 
 checksum:
   name_template: "checksums.txt"

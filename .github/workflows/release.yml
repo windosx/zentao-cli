@@ -11,7 +11,9 @@ permissions:
 jobs:
   goreleaser:
     name: GoReleaser Release
-    runs-on: ubuntu-latest
+    # windows-latest 预装 Chocolatey (choco)，可用于构建 Chocolatey 包；
+    # GoReleaser 支持在 Windows 上交叉编译所有平台 (darwin/linux/windows)。
+    runs-on: windows-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -32,3 +34,7 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Homebrew / Winget 仓库推送 token（首次发布未配置时置空跳过）
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
