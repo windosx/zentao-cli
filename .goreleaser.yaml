@@ -59,7 +59,7 @@ nfpms:
     package_name: zentao-cli
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     vendor: windosx
-    maintainer: "windosx <support@windosx.com>"
+    maintainer: "windosx <windosx@163.com>"
     homepage: "https://github.com/windosx/zentao-cli"
     description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
     license: MIT
@@ -100,8 +100,8 @@ homebrew_casks:
     # 已创建 windosx/homebrew-tap 仓库，发布时自动推送 cask
     skip_upload: false
     commit_author:
-      name: windosx-bot
-      email: bot@windosx.com
+      name: windosx
+      email: windosx@163.com
     binaries:
       - zentao
 
@@ -133,8 +133,8 @@ winget:
       branch: main
       token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
     commit_author:
-      name: windosx-bot
-      email: bot@windosx.com
+      name: windosx
+      email: windosx@163.com
 
 # 4. Chocolatey for Windows (需在 windows-latest runner 上构建)
 chocolateys:
