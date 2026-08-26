@@ -88,7 +88,7 @@ nfpms:
 
 # 2. Homebrew (macOS / Linux) - v2 homebrew_casks
 homebrew_casks:
-  - name: zentao
+  - name: zentao-cli
     repository:
       owner: windosx
       name: homebrew-tap
@@ -97,8 +97,8 @@ homebrew_casks:
     directory: Casks
     homepage: "https://github.com/windosx/zentao-cli"
     description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    # 配置 windosx/homebrew-tap 仓库及 token 后改为 false 以自动推送
-    skip_upload: true
+    # 已创建 windosx/homebrew-tap 仓库，发布时自动推送 cask
+    skip_upload: false
     commit_author:
       name: windosx-bot
       email: bot@windosx.com
