@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: zentao-cli
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: zentao-darwin
+    binary: zentao
+    main: ./main.go
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=1
+    ldflags:
+      - -s -w
+      - -X github.com/windosx/zentao-cli/cmd.Version={{.Version}}
+      - -X github.com/windosx/zentao-cli/cmd.GitCommit={{.Commit}}
+      - -X github.com/windosx/zentao-cli/cmd.BuildDate={{.Date}}
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+source:
+  enabled: true
+  name_template: '{{ .ProjectName }}-{{ .Version }}-source'
+
+sboms:
+  - id: archive
+    artifacts: archive
+
+archives:
+  - id: default
+    name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}'
+    formats:
+      - tar.gz
+    wrap_in_directory: true
+    files:
+      - README.md
+      - LICENSE*
+      - NOTICE
+      - skills/**/*
+
+homebrew_casks:
+  - name: zentao-cli
+    repository:
+      owner: windosx
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/windosx/zentao-cli"
+    description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
+    skip_upload: false
+    commit_author:
+      name: windosx
+      email: windosx@163.com
+    binaries:
+      - zentao
+
+checksum:
+  name_template: '{{ .ProjectName }}-{{ .Version }}-checksums.txt'
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: "Features"
+      regexp: '^feat[(\w)]*:+.*$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^fix[(\w)]*:+.*$'
+      order: 1
+    - title: "Performance Improvements"
+      regexp: '^perf[(\w)]*:+.*$'
+      order: 2
+    - title: "Maintenance & Refactor"
+      regexp: '^(refactor|style)[(\w)]*:+.*$'
+      order: 3
+    - title: "Other Changes"
+      order: 999
+
+release:
+  github:
+    owner: windosx
+    name: zentao-cli
+  header: |
+    ## zentao-cli {{ .Version }}
+
+    `zentao-cli` 是面向 AI Agent 与现代开发者的禅道 (ZenTao PMS) 命令行工具与 Go SDK。
+
+    安装方式详见 [README](https://github.com/windosx/zentao-cli#readme)。
+  draft: false
+  prerelease: auto
+  mode: replace

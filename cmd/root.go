@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/windosx/zentao-cli/internal/config"
 	"github.com/windosx/zentao-cli/internal/output"
+	"github.com/windosx/zentao-cli/internal/secret"
 	"github.com/windosx/zentao-cli/pkg/zentao"
 )
 
@@ -43,27 +45,19 @@ var RootCmd = &cobra.Command{
 		// Create ZenTao Client with active configuration
 		zcfg := opts.ToZentaoConfig()
 		client = zentao.New(zcfg)
+		// Lazy migration from legacy plain-text profiles.json to keyring
+		if client.Password == "" && client.BaseURL != "" && client.Account != "" {
+			if pw, err := secret.Get(client.BaseURL, client.Account); err == nil {
+				client.Password = pw
+			}
+		}
 		client.OnSessionRefreshed = func(cookie, rand string) {
 			config.UpdateActiveProfileCookie(cookie, rand)
 		}
 
 		// Auto-bind active profile credentials and session
 		if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
-			if client.BaseURL == "" {
-				client.BaseURL = strings.TrimRight(profile.URL, "/")
-			}
-			if client.Account == "" {
-				client.Account = profile.Account
-			}
-			if client.Password == "" && profile.Password != "" {
-				client.Password = profile.Password
-			}
-			if client.GetRand() == "" {
-				client.SetRand(profile.Rand)
-			}
-			if profile.Cookie != "" {
-				client.Cookie = profile.Cookie
-			}
+			bindProfileToClient(profile)
 		}
 
 		return nil
@@ -83,18 +77,68 @@ func Execute() {
 	}
 }
 
+// classifyError maps an error to an exit code and category. Structured
+// zentao errors are classified by kind; only cobra flag/command usage errors
+// fall back to narrow string matching.
 func classifyError(err error) (int, string) {
 	if err == nil {
 		return output.ExitCodeSuccess, "none"
 	}
-	msg := strings.ToLower(err.Error())
-	switch {
-	case strings.Contains(msg, "not logged in") || strings.Contains(msg, "login") || strings.Contains(msg, "auth") || strings.Contains(msg, "session") || strings.Contains(msg, "超时") || strings.Contains(msg, "登入"):
+	if zentao.IsAuthError(err) {
 		return output.ExitCodeAuth, "auth"
-	case strings.Contains(msg, "required") || strings.Contains(msg, "invalid") || strings.Contains(msg, "flag") || strings.Contains(msg, "unknown"):
+	}
+	if errors.Is(err, zentao.ErrValidation) {
 		return output.ExitCodeValidation, "validation"
-	default:
-		return output.ExitCodeAPI, "api"
+	}
+	msg := strings.ToLower(err.Error())
+	// Cobra usage errors: unknown command/flag, missing required flag.
+	if strings.Contains(msg, "unknown command") ||
+		strings.Contains(msg, "unknown flag") ||
+		strings.Contains(msg, "unknown shorthand flag") ||
+		strings.Contains(msg, "required flag") ||
+		strings.Contains(msg, "flag needs an argument") ||
+		strings.Contains(msg, "invalid argument") {
+		return output.ExitCodeValidation, "validation"
+	}
+	return output.ExitCodeAPI, "api"
+}
+
+// maskCookie redacts a session cookie for display: "name=****abcd".
+// The full value is only shown with explicit --show-secrets.
+func maskCookie(cookie string) string {
+	if cookie == "" {
+		return ""
+	}
+	name, value, ok := strings.Cut(cookie, "=")
+	if !ok {
+		return "****" + cookie[len(cookie)-4:]
+	}
+	if len(value) <= 4 {
+		return name + "=****" + value
+	}
+	return name + "=****" + value[len(value)-4:]
+}
+
+// bindProfileToClient copies credentials and session state from a saved
+// profile into the global client, filling only empty fields.
+func bindProfileToClient(p *config.Profile) {
+	if client == nil || p == nil {
+		return
+	}
+	if client.BaseURL == "" {
+		client.BaseURL = strings.TrimRight(p.URL, "/")
+	}
+	if client.Account == "" {
+		client.Account = p.Account
+	}
+	if client.Password == "" && p.Password != "" {
+		client.Password = p.Password
+	}
+	if client.GetRand() == "" {
+		client.SetRand(p.Rand)
+	}
+	if client.Cookie == "" {
+		client.Cookie = p.Cookie
 	}
 }
 
@@ -135,20 +179,8 @@ func ensureClientLoggedIn(ctx context.Context) error {
 
 	// 2. Try loading active profile
 	if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
-		if client.BaseURL == "" {
-			client.BaseURL = strings.TrimRight(profile.URL, "/")
-		}
-		if client.Account == "" {
-			client.Account = profile.Account
-		}
-		if client.Password == "" && profile.Password != "" {
-			client.Password = profile.Password
-		}
-		if client.GetRand() == "" {
-			client.SetRand(profile.Rand)
-		}
-		if profile.Cookie != "" {
-			client.Cookie = profile.Cookie
+		bindProfileToClient(profile)
+		if client.Cookie != "" {
 			return nil
 		}
 	}

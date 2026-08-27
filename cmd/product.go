@@ -126,6 +126,7 @@ func init() {
 	productListCmd.Flags().StringVar(&productLineID, "line", "0", "按产品线 ID 过滤 (0 代表全量)")
 	productListCmd.Flags().StringVar(&productProgramID, "program", "0", "按所属项目集/项目 ID 过滤 (0 代表全量/无项目集)")
 	productListCmd.Flags().StringVar(&productOrderBy, "order-by", "order_desc", "排序字段 (例如: order_desc, order_asc, id_desc, id_asc, name_asc)")
+	addPaginationFlags(productListCmd)
 
 	productParamsCmd.Flags().StringVar(&productProgramID, "program", "0", "按所属项目集/项目 ID 过滤 (0 代表全量/无项目集)")
 

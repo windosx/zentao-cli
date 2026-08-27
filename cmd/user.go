@@ -48,6 +48,9 @@ var userListCmd = &cobra.Command{
 		if userOrderBy != "" {
 			params.Set("orderBy", userOrderBy)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.UserList(ctx, params)
 		if err != nil {
@@ -137,6 +140,7 @@ func init() {
 	userListCmd.Flags().StringVar(&userDeptID, "dept", "0", "部门 ID (0 代表全部部门)")
 	userListCmd.Flags().StringVar(&userType, "type", "bydept", "列表类型: bydept (按部门), all (全量)")
 	userListCmd.Flags().StringVar(&userOrderBy, "order-by", "id", "排序字段 (例如 id, account_asc)")
+	addPaginationFlags(userListCmd)
 
 	userParamsCmd.Flags().StringVar(&userDeptID, "dept", "0", "部门 ID (0 代表全部部门)")
 

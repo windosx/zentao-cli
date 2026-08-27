@@ -112,7 +112,7 @@ func (c *Client) UserAdd(ctx context.Context, params Params) (json.RawMessage, e
 		verify = c.Password
 	}
 	if c.rand == "" {
-		return nil, fmt.Errorf("user add: session rand not available (login first)")
+		return nil, authError("user add: session rand not available (login first)")
 	}
 
 	params = cloneParams(params)
@@ -142,6 +142,13 @@ func (c *Client) ProductList(ctx context.Context, params Params) (json.RawMessag
 	data, err := c.call(ctx, http.MethodGet, "product", "all", mergedAll)
 	if err == nil {
 		return data, nil
+	}
+
+	// Only fall back to the legacy product/browse route when product/all does
+	// not exist on this server; other errors (auth, permission, server errors)
+	// are returned as-is.
+	if !isModuleOrMethodError(err) {
+		return nil, err
 	}
 
 	defaultsBrowse := Params{
@@ -269,7 +276,7 @@ func (c *Client) TaskList(ctx context.Context, params Params) (json.RawMessage, 
 // TaskCreateParams returns parameters and schema needed to create a task (m=task&f=create&project=<id>).
 func (c *Client) TaskCreateParams(ctx context.Context, projectID string) (json.RawMessage, error) {
 	if projectID == "" {
-		return nil, fmt.Errorf("task create params: projectID is required")
+		return nil, fmt.Errorf("%w: task create params: projectID is required", ErrValidation)
 	}
 	params := Params{"project": {projectID}}
 	return c.call(ctx, http.MethodGet, "task", "create", params)
@@ -283,7 +290,7 @@ func (c *Client) TaskCreate(ctx context.Context, params Params) (json.RawMessage
 		project = params.Get("execution")
 	}
 	if project == "" {
-		return nil, fmt.Errorf("task create: --project is required")
+		return nil, fmt.Errorf("%w: task create: --project is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "task", "create", routeParam{Key: "project", Value: project}, params)
 }
@@ -291,7 +298,7 @@ func (c *Client) TaskCreate(ctx context.Context, params Params) (json.RawMessage
 // TaskFinishParams returns parameters and current state needed to finish a task (m=task&f=finish&taskID=<id>).
 func (c *Client) TaskFinishParams(ctx context.Context, taskID string) (json.RawMessage, error) {
 	if taskID == "" {
-		return nil, fmt.Errorf("task finish params: taskID is required")
+		return nil, fmt.Errorf("%w: task finish params: taskID is required", ErrValidation)
 	}
 	params := Params{"taskID": {taskID}}
 	return c.call(ctx, http.MethodGet, "task", "finish", params)
@@ -301,7 +308,7 @@ func (c *Client) TaskFinishParams(ctx context.Context, taskID string) (json.RawM
 // fields: real (actual hours), comment.
 func (c *Client) TaskFinish(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
 	if taskID == "" {
-		return nil, fmt.Errorf("task finish: --id is required")
+		return nil, fmt.Errorf("%w: task finish: --id is required", ErrValidation)
 	}
 	if params == nil {
 		params = Params{}
@@ -312,7 +319,7 @@ func (c *Client) TaskFinish(ctx context.Context, taskID string, params Params) (
 // TaskDelete deletes a task by ID (GET/POST m=task&f=delete&taskID=<id>&confirm=yes).
 func (c *Client) TaskDelete(ctx context.Context, projectID, taskID string) (json.RawMessage, error) {
 	if taskID == "" {
-		return nil, fmt.Errorf("task delete: taskID is required")
+		return nil, fmt.Errorf("%w: task delete: taskID is required", ErrValidation)
 	}
 	if projectID == "" {
 		projectID = "0"
@@ -368,7 +375,7 @@ func (c *Client) BugList(ctx context.Context, params Params) (json.RawMessage, e
 // BugCreateParams returns parameters and schema needed to create a bug (m=bug&f=create&productID=<id>&branch=<branch>).
 func (c *Client) BugCreateParams(ctx context.Context, productID string, branch string) (json.RawMessage, error) {
 	if productID == "" {
-		return nil, fmt.Errorf("bug create params: productID is required")
+		return nil, fmt.Errorf("%w: bug create params: productID is required", ErrValidation)
 	}
 	if branch == "" {
 		branch = "0"
@@ -381,7 +388,7 @@ func (c *Client) BugCreateParams(ctx context.Context, productID string, branch s
 func (c *Client) BugCreate(ctx context.Context, params Params) (json.RawMessage, error) {
 	product := params.Get("product")
 	if product == "" {
-		return nil, fmt.Errorf("bug create: --product is required")
+		return nil, fmt.Errorf("%w: bug create: --product is required", ErrValidation)
 	}
 
 	body := cloneParams(params)
@@ -411,7 +418,7 @@ func (c *Client) BugCreate(ctx context.Context, params Params) (json.RawMessage,
 // BugResolveParams returns parameters and schema needed to resolve a bug (m=bug&f=resolve&bugID=<id>).
 func (c *Client) BugResolveParams(ctx context.Context, bugID string) (json.RawMessage, error) {
 	if bugID == "" {
-		return nil, fmt.Errorf("bug resolve params: bugID is required")
+		return nil, fmt.Errorf("%w: bug resolve params: bugID is required", ErrValidation)
 	}
 	params := Params{"bugID": {bugID}}
 	return c.call(ctx, http.MethodGet, "bug", "resolve", params)
@@ -421,7 +428,7 @@ func (c *Client) BugResolveParams(ctx context.Context, bugID string) (json.RawMe
 // resolution, resolvedBuild, comment.
 func (c *Client) BugResolve(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
 	if bugID == "" {
-		return nil, fmt.Errorf("bug resolve: --id is required")
+		return nil, fmt.Errorf("%w: bug resolve: --id is required", ErrValidation)
 	}
 	if params == nil {
 		params = Params{}
@@ -439,7 +446,7 @@ func (c *Client) BugResolve(ctx context.Context, bugID string, params Params) (j
 // BugDelete deletes a bug by ID (GET/POST m=bug&f=delete&bugID=<id>&confirm=yes).
 func (c *Client) BugDelete(ctx context.Context, bugID string) (json.RawMessage, error) {
 	if bugID == "" {
-		return nil, fmt.Errorf("bug delete: bugID is required")
+		return nil, fmt.Errorf("%w: bug delete: bugID is required", ErrValidation)
 	}
 	params := Params{
 		"bugID":   {bugID},
@@ -536,7 +543,7 @@ func (c *Client) TodoList(ctx context.Context, params Params) (json.RawMessage, 
 // name, date (YYYY-MM-DD), begin, end, type (custom, task, bug, story), pri, desc.
 func (c *Client) TodoCreate(ctx context.Context, params Params) (json.RawMessage, error) {
 	if params.Get("name") == "" {
-		return nil, fmt.Errorf("todo create: --name is required")
+		return nil, fmt.Errorf("%w: todo create: --name is required", ErrValidation)
 	}
 
 	body := cloneParams(params)
@@ -569,7 +576,7 @@ func (c *Client) TodoCreate(ctx context.Context, params Params) (json.RawMessage
 // TodoFinish marks a todo as completed (POST m=todo&f=finish&todoID=<id>).
 func (c *Client) TodoFinish(ctx context.Context, todoID string) (json.RawMessage, error) {
 	if todoID == "" {
-		return nil, fmt.Errorf("todo finish: --id is required")
+		return nil, fmt.Errorf("%w: todo finish: --id is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "todo", "finish", routeParam{Key: "todoID", Value: todoID}, Params{})
 }
@@ -577,7 +584,7 @@ func (c *Client) TodoFinish(ctx context.Context, todoID string) (json.RawMessage
 // TodoStart marks a todo as started/doing (POST m=todo&f=start&todoID=<id>).
 func (c *Client) TodoStart(ctx context.Context, todoID string) (json.RawMessage, error) {
 	if todoID == "" {
-		return nil, fmt.Errorf("todo start: --id is required")
+		return nil, fmt.Errorf("%w: todo start: --id is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "todo", "start", routeParam{Key: "todoID", Value: todoID}, Params{})
 }
@@ -585,7 +592,7 @@ func (c *Client) TodoStart(ctx context.Context, todoID string) (json.RawMessage,
 // TodoClose closes a todo (POST m=todo&f=close&todoID=<id>).
 func (c *Client) TodoClose(ctx context.Context, todoID string) (json.RawMessage, error) {
 	if todoID == "" {
-		return nil, fmt.Errorf("todo close: --id is required")
+		return nil, fmt.Errorf("%w: todo close: --id is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "todo", "close", routeParam{Key: "todoID", Value: todoID}, Params{})
 }
@@ -593,7 +600,7 @@ func (c *Client) TodoClose(ctx context.Context, todoID string) (json.RawMessage,
 // TodoDelete deletes a todo by ID (GET/POST m=todo&f=delete&todoID=<id>&confirm=yes).
 func (c *Client) TodoDelete(ctx context.Context, todoID string) (json.RawMessage, error) {
 	if todoID == "" {
-		return nil, fmt.Errorf("todo delete: todoID is required")
+		return nil, fmt.Errorf("%w: todo delete: todoID is required", ErrValidation)
 	}
 	params := Params{
 		"todoID":  {todoID},

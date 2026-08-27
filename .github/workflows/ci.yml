@@ -22,8 +22,11 @@ jobs:
         run: $(go env GOPATH)/bin/golangci-lint run ./...
 
   test:
-    name: Unit Tests with Race Detector
-    runs-on: ubuntu-latest
+    name: Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

@@ -1,0 +1,29 @@
+zentao-cli
+==========
+
+This project includes software ported from the ZenTao PMS open-source
+project (https://github.com/easysoft/zentaopms).
+
+pkg/zentao
+----------
+The Go client in pkg/zentao is a port of the official PHP SDK shipped
+with ZenTao PMS:
+
+  Source:    https://github.com/easysoft/zentaopms/blob/zentaopms_21.7_20250516/sdk/php/zentao.php
+  Tag:       zentaopms_21.7_20250516
+  Copyright: Copyright (c) Qingdao Nature Easy Soft Network Technology Co,LTD
+             (ZenTao Software (Qingdao) Co., Ltd. www.cnezsoft.com)
+  License:   ZPL (http://zpl.pub/page/zplv12.html) or
+             AGPL (https://www.gnu.org/licenses/agpl-3.0.en.html)
+
+  As a derivative work of that SDK, pkg/zentao is distributed under the
+  Z Public License (ZPL) 1.2. See LICENSE-ZPL for the full text. All
+  original copyright notices and indications of ZenTao are retained.
+
+Everything else in this repository is original work distributed under
+the MIT License (see LICENSE).
+
+Note: applications developed against the ZenTao HTTP API may, per
+ZPL 1.2 clause 7, be released under their own license; however,
+pkg/zentao embeds ported SDK logic and is therefore kept under ZPL 1.2
+out of an abundance of caution.

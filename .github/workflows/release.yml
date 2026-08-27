@@ -7,22 +7,14 @@ on:
 
 permissions:
   contents: write
-  # 允许工作流写入软件物料清单 (SBOM) 签名证明
   id-token: write
   attestations: write
 
 jobs:
-  goreleaser:
-    name: GoReleaser Release
-    # windows-latest 预装 Chocolatey (choco)，可用于构建 Chocolatey 包；
-    # GoReleaser 支持在 Windows 上交叉编译所有平台 (darwin/linux/windows × amd64/arm64)。
-    runs-on: windows-latest
+  validate:
+    name: Validate Tag Format
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Validate SemVer 2.0 Build Metadata Tag Format
         shell: bash
         run: |
@@ -34,6 +26,69 @@ jobs:
           fi
           echo "==> Tag format is valid!"
 
+  release-darwin:
+    name: Build macOS (Native CGO)
+    needs: validate
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run GoReleaser (Darwin Split)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --split --config .goreleaser.darwin.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  release-rest:
+    name: Build Linux & Windows
+    needs: validate
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run GoReleaser (Linux/Windows Split)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --split --config .goreleaser.rest.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+  release-continue:
+    name: Finalize & Publish Release
+    needs: [release-darwin, release-rest]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -43,23 +98,19 @@ jobs:
       - name: Install syft (SBOM generator)
         uses: anchore/sbom-action/download-syft@v0.18.0
 
-      - name: Run GoReleaser
+      - name: Run GoReleaser Continue
         id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean
+          args: continue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Homebrew / Winget 仓库推送 token（未配置时对应配置块 skip_upload: true）
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
 
-      # SLSA Provenance 自动生成模式：不传 predicate-type/predicate，
-      # actions/attest@v4 自动生成合规的 SLSA v1 provenance 并签名。
-      # continue-on-error 保证即使 attestation 失败也不阻塞 tag 发布。
       - name: Attest checksums
         if: always()
         continue-on-error: true

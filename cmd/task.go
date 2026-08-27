@@ -58,6 +58,9 @@ var taskListCmd = &cobra.Command{
 		if taskOrderBy != "" {
 			params.Set("orderBy", taskOrderBy)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.TaskList(ctx, params)
 		if err != nil {

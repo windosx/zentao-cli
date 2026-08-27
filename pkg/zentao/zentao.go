@@ -1,5 +1,14 @@
 // Package zentao implements a client for the ZenTaoPMS API, ported from the
-// official PHP SDK shipped with zentaopms (zentaopms_21.7 sdk/php/zentao.php).
+// official PHP SDK shipped with zentaopms (zentaopms_21.7_20250516 sdk/php/zentao.php).
+//
+// This package is a derivative work of the ZenTao PHP SDK:
+//
+//	Copyright (c) Qingdao Nature Easy Soft Network Technology Co,LTD
+//	(ZenTao Software (Qingdao) Co., Ltd. www.cnezsoft.com)
+//	License: ZPL (http://zpl.pub/page/zplv12.html) or AGPL-3.0
+//
+// It is distributed under the Z Public License (ZPL) 1.2 — see LICENSE-ZPL
+// and NOTICE in the repository root. The rest of zentao-cli is MIT licensed.
 //
 // Auth flow (mirrors the PHP SDK constructor):
 //  1. GET  ?m=api&f=getSessionID            -> { sessionName, sessionID, rand }

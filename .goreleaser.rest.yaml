@@ -1,6 +1,5 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
-
 project_name: zentao-cli
 
 before:
@@ -8,7 +7,7 @@ before:
     - go mod tidy
 
 builds:
-  - id: zentao
+  - id: zentao-rest
     binary: zentao
     main: ./main.go
     flags:
@@ -21,22 +20,11 @@ builds:
       - -X github.com/windosx/zentao-cli/cmd.GitCommit={{.Commit}}
       - -X github.com/windosx/zentao-cli/cmd.BuildDate={{.Date}}
     goos:
-      - darwin
       - linux
       - windows
     goarch:
       - amd64
       - arm64
-
-# 源码包：便于 go install / go get 及审计构建
-source:
-  enabled: true
-  name_template: '{{ .ProjectName }}-{{ .Version }}-source'
-
-# 软件物料清单 (SBOM)，对标成熟开源项目供应链实践
-sboms:
-  - id: archive
-    artifacts: archive
 
 archives:
   - id: default
@@ -54,26 +42,6 @@ archives:
       - NOTICE
       - skills/**/*
 
-# 1. Homebrew (macOS / Linux) - v2 homebrew_casks
-homebrew_casks:
-  - name: zentao-cli
-    repository:
-      owner: windosx
-      name: homebrew-tap
-      branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
-    homepage: "https://github.com/windosx/zentao-cli"
-    description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    # 已创建 windosx/homebrew-tap 仓库，发布时自动推送 cask
-    skip_upload: false
-    commit_author:
-      name: windosx
-      email: windosx@163.com
-    binaries:
-      - zentao
-
-# 2. Windows Package Manager (WinGet)
 winget:
   - name: zentao-cli
     package_name: zentao-cli
@@ -93,9 +61,6 @@ winget:
       - cli
       - agent
       - project-management
-    # 每次发版自动推送到 fork（windosx/winget-pkgs）并向 microsoft/winget-pkgs 发 PR
-    # 注意：repository.branch 不显式指定，PR 模式下默认为 zentao-cli-{{ .Version }}（必须与 base 分支不同）
-    skip_upload: false
     repository:
       owner: windosx
       name: winget-pkgs
@@ -110,7 +75,6 @@ winget:
       name: windosx
       email: windosx@163.com
 
-# 3. Chocolatey for Windows (需在 windows-latest runner 上构建)
 chocolateys:
   - name: zentao-cli
     title: ZenTao CLI
@@ -127,54 +91,14 @@ chocolateys:
       ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
       Provides zero-auth persistent sessions and full workbench support.
     tags: "zentao zentao-cli cli sdk project-management agile"
-    # 每次发版自动推送到 Chocolatey 官方源 (push.chocolatey.org)
     skip_publish: false
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
-
-snapshot:
-  version_template: SNAPSHOT-{{ .Commit }}
-
-checksum:
-  name_template: '{{ .ProjectName }}-{{ .Version }}-checksums.txt'
-  algorithm: sha256
-
-changelog:
-  sort: asc
-  use: github
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - Merge pull request
-      - Merge branch
-  groups:
-    - title: "Features"
-      regexp: '^feat[(\w)]*:+.*$'
-      order: 0
-    - title: "Bug Fixes"
-      regexp: '^fix[(\w)]*:+.*$'
-      order: 1
-    - title: "Performance Improvements"
-      regexp: '^perf[(\w)]*:+.*$'
-      order: 2
-    - title: "Maintenance & Refactor"
-      regexp: '^(refactor|style)[(\w)]*:+.*$'
-      order: 3
-    - title: "Other Changes"
-      order: 999
 
 release:
   github:
     owner: windosx
     name: zentao-cli
-  header: |
-    ## zentao-cli {{ .Version }}
-
-    `zentao-cli` 是面向 AI Agent 与现代开发者的禅道 (ZenTao PMS) 命令行工具与 Go SDK。
-
-    安装方式详见 [README](https://github.com/windosx/zentao-cli#readme)。
   draft: false
   prerelease: auto
   mode: replace

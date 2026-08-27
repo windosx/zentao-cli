@@ -59,6 +59,9 @@ var bugListCmd = &cobra.Command{
 		if bugOrderBy != "" {
 			params.Set("orderBy", bugOrderBy)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.BugList(ctx, params)
 		if err != nil {
@@ -242,6 +245,7 @@ func init() {
 	bugListCmd.Flags().StringVar(&bugBranch, "branch", "all", "分支 ID (all 为全部/主干)")
 	bugListCmd.Flags().StringVar(&bugBrowseType, "browse-type", "all", "过滤条件预设: all (全部), unclosed (未关闭), assigntome (指派给我), openedbyme (由我创建), resolvedbyme (由我解决), closedbyme (由我关闭), needconfirm (待确认), toclosed (待关闭), unconfirmed (未确认), unassigned (未指派), longlife (久未解决), postponed (被延期), overdue (已过期)")
 	bugListCmd.Flags().StringVar(&bugOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, id_asc, pri_asc, severity_desc, openedDate_desc)")
+	addPaginationFlags(bugListCmd)
 
 	bugParamsCmd.Flags().StringVar(&bugProductID, "product", "", "所属产品 ID (必填)")
 	bugParamsCmd.Flags().StringVar(&bugBranch, "branch", "all", "分支 ID (all 为全部/主干)")

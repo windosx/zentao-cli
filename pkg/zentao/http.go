@@ -29,8 +29,9 @@ func (c *Client) call(ctx context.Context, method, module, f string, params url.
 // callRoute is call with a route parameter baked into the URL.
 func (c *Client) callRoute(ctx context.Context, method, module, f string, route routeParam, params url.Values) (json.RawMessage, error) {
 	data, err := c.callRaw(ctx, method, module, f, route, params)
-	if err != nil && isAuthError(err) && c.Account != "" && c.Password != "" {
-		// Session expired or unauthenticated: attempt transparent re-login and retry
+	if err != nil && IsAuthError(err) && c.Account != "" && c.Password != "" {
+		// Session expired or unauthenticated: attempt transparent re-login and retry.
+		// Permission failures are excluded: re-login cannot fix them.
 		if loginErr := c.Login(ctx); loginErr == nil {
 			return c.callRaw(ctx, method, module, f, route, params)
 		}
@@ -85,7 +86,7 @@ func (c *Client) do(ctx context.Context, method, module, f string, route routePa
 		return nil, err
 	}
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("http %d: %s", resp.StatusCode, extractErrorMessage(body))
+		return nil, &Error{Kind: kindForStatus(resp.StatusCode), HTTPStatus: resp.StatusCode, Message: extractErrorMessage(body)}
 	}
 	return body, nil
 }
@@ -212,19 +213,19 @@ func unwrapResponse(body []byte) (json.RawMessage, error) {
 		if strings.Trim(string(body), `"`) == "success" {
 			return json.RawMessage(`{}`), nil
 		}
-		return nil, fmt.Errorf("zentao error: %s", extractErrorMessage(body))
+		return nil, apiError(extractErrorMessage(body))
 	}
 
 	if isLoginPage(env) {
-		return nil, fmt.Errorf("zentao: session expired or login required (redirected to user login)")
+		return nil, authError("session expired or login required (redirected to user login)")
 	}
 
 	if isPermissionDenied(env) {
-		return nil, fmt.Errorf("zentao: permission denied (当前用户没有该操作的权限)")
+		return nil, permissionError("permission denied (当前用户没有该操作的权限)")
 	}
 
 	if isFailureEnv(env) {
-		return nil, fmt.Errorf("zentao: %s", extractFailMessage(env))
+		return nil, apiError(extractFailMessage(env))
 	}
 
 	return extractSuccessPayload(env, body)
@@ -254,7 +255,7 @@ func extractSuccessPayload(env rawEnvelope, body []byte) (json.RawMessage, error
 		return messageOrEmpty(env.Message), nil
 	}
 	if env.Error != "" {
-		return nil, fmt.Errorf("zentao: %s", env.Error)
+		return nil, apiError(env.Error)
 	}
 
 	return body, nil
@@ -360,10 +361,11 @@ func urlValues() url.Values {
 }
 
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	runes := []rune(s)
+	if len(runes) <= n {
 		return s
 	}
-	return s[:n] + "..."
+	return string(runes[:n]) + "..."
 }
 
 var htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
@@ -404,19 +406,14 @@ func extractErrorMessage(body []byte) string {
 	return truncate(s, 200)
 }
 
-func isAuthError(err error) bool {
-	if err == nil {
-		return false
+// kindForStatus maps an HTTP status code to an ErrorKind.
+func kindForStatus(status int) ErrorKind {
+	switch status {
+	case http.StatusUnauthorized:
+		return KindAuth
+	case http.StatusForbidden:
+		return KindPermission
+	default:
+		return KindAPI
 	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "login") ||
-		strings.Contains(msg, "登录") ||
-		strings.Contains(msg, "超时") ||
-		strings.Contains(msg, "登入") ||
-		strings.Contains(msg, "session") ||
-		strings.Contains(msg, "401") ||
-		strings.Contains(msg, "unauthorized") ||
-		strings.Contains(msg, "not logged") ||
-		strings.Contains(msg, "access denied") ||
-		strings.Contains(msg, "鉴权失败")
 }

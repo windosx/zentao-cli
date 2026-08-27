@@ -6,12 +6,19 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync/atomic"
 	"testing"
 
 	"github.com/windosx/zentao-cli/internal/config"
 	"github.com/windosx/zentao-cli/internal/output"
+	"github.com/windosx/zentao-cli/pkg/zentao"
 )
+
+func TestMain(m *testing.M) {
+	_ = os.Setenv("ZENTAO_NO_KEYRING", "1")
+	os.Exit(m.Run())
+}
 
 func TestRootCmd_Help(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -400,11 +407,14 @@ func TestClassifyError_And_ValidationErrors(t *testing.T) {
 	if code, cat := classifyError(nil); code != output.ExitCodeSuccess || cat != "none" {
 		t.Errorf("unexpected success classification: code=%d, cat=%s", code, cat)
 	}
-	if code, cat := classifyError(fmt.Errorf("session timeout please login")); code != output.ExitCodeAuth || cat != "auth" {
+	if code, cat := classifyError(&zentao.Error{Kind: zentao.KindAuth, Message: "session timeout please login"}); code != output.ExitCodeAuth || cat != "auth" {
 		t.Errorf("unexpected auth classification: code=%d, cat=%s", code, cat)
 	}
-	if code, cat := classifyError(fmt.Errorf("--name is required")); code != output.ExitCodeValidation || cat != "validation" {
+	if code, cat := classifyError(fmt.Errorf("%w: --name is required", zentao.ErrValidation)); code != output.ExitCodeValidation || cat != "validation" {
 		t.Errorf("unexpected validation classification: code=%d, cat=%s", code, cat)
+	}
+	if code, cat := classifyError(fmt.Errorf("unknown flag: --nope")); code != output.ExitCodeValidation || cat != "validation" {
+		t.Errorf("unexpected cobra usage classification: code=%d, cat=%s", code, cat)
 	}
 	if code, cat := classifyError(fmt.Errorf("internal server error")); code != output.ExitCodeAPI || cat != "api" {
 		t.Errorf("unexpected api classification: code=%d, cat=%s", code, cat)

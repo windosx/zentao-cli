@@ -43,6 +43,9 @@ var myTaskCmd = &cobra.Command{
 		if myTaskOrderBy != "" {
 			params.Set("orderBy", myTaskOrderBy)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.MyTasks(ctx, params)
 		if err != nil {
@@ -67,6 +70,9 @@ var myBugCmd = &cobra.Command{
 		}
 		if myBugOrderBy != "" {
 			params.Set("orderBy", myBugOrderBy)
+		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
 		}
 
 		data, err := client.MyBugs(ctx, params)
@@ -93,6 +99,9 @@ var myTodoCmd = &cobra.Command{
 		if myTodoStatus != "" {
 			params.Set("status", myTodoStatus)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.MyTodos(ctx, params)
 		if err != nil {
@@ -117,6 +126,9 @@ var myStoryCmd = &cobra.Command{
 		}
 		if myStoryOrderBy != "" {
 			params.Set("orderBy", myStoryOrderBy)
+		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
 		}
 
 		data, err := client.MyStories(ctx, params)
@@ -143,6 +155,9 @@ var myProjectCmd = &cobra.Command{
 		if myProjectOrderBy != "" {
 			params.Set("orderBy", myProjectOrderBy)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.MyProjects(ctx, params)
 		if err != nil {
@@ -165,6 +180,9 @@ var myDynamicCmd = &cobra.Command{
 		if myDynamicType != "" {
 			params.Set("type", myDynamicType)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.MyDynamics(ctx, params)
 		if err != nil {
@@ -177,20 +195,26 @@ var myDynamicCmd = &cobra.Command{
 func init() {
 	myTaskCmd.Flags().StringVar(&myTaskType, "type", "assignedTo", "任务筛选类型: assignedTo (指派给我), openedBy (我创建的), finishedBy (我完成的), closedBy (我关闭的), canceledBy (我取消的), assignedBy (我指派的), undone (未完成), done (已完成)")
 	myTaskCmd.Flags().StringVar(&myTaskOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, pri_asc, deadline_asc, status_asc)")
+	addPaginationFlags(myTaskCmd)
 
 	myBugCmd.Flags().StringVar(&myBugType, "type", "assignedTo", "Bug 筛选类型: assignedTo (指派给我), openedBy (我创建的), resolvedBy (我解决的), closedBy (我关闭的), assignedBy (我指派的)")
 	myBugCmd.Flags().StringVar(&myBugOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, pri_asc, severity_desc, openedDate_desc)")
+	addPaginationFlags(myBugCmd)
 
 	myTodoCmd.Flags().StringVar(&myTodoType, "type", "all", "待办周期范围: all (全部), today (今天), thisWeek (本周), lastWeek (上周), thisMonth (本月), lastMonth (上月), before (逾期未完), future (将来待定)")
 	myTodoCmd.Flags().StringVar(&myTodoStatus, "status", "all", "待办状态过滤: all (全部), wait (未开始), doing (进行中), done (已完成), closed (已关闭)")
+	addPaginationFlags(myTodoCmd)
 
-	myStoryCmd.Flags().StringVar(&myStoryType, "type", "assignedTo", "需求筛选类型: assignedTo (指派给我), openedBy (我创建的), reviewedBy (由我评审), closedBy (由我关闭), assignedBy (我指派的)")
+	myStoryCmd.Flags().StringVar(&myStoryType, "type", "assignedTo", "需求筛选类型: assignedTo (指派给我), openedBy (我创建的), reviewedBy (由我评审), closedBy (我关闭的), assignedBy (我指派的)")
 	myStoryCmd.Flags().StringVar(&myStoryOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, pri_asc, stage_asc)")
+	addPaginationFlags(myStoryCmd)
 
 	myProjectCmd.Flags().StringVar(&myProjectType, "status", "all", "项目状态过滤: all (全部), doing (进行中), wait (未开始), suspended (已挂起), closed (已关闭), undone (未完成)")
 	myProjectCmd.Flags().StringVar(&myProjectOrderBy, "order-by", "order_desc", "排序字段 (例如: order_desc, id_desc, begin_desc, end_desc)")
+	addPaginationFlags(myProjectCmd)
 
 	myDynamicCmd.Flags().StringVar(&myDynamicType, "type", "today", "动态周期范围: today (今天), yesterday (昨天), thisWeek (本周), lastWeek (上周), thisMonth (本月), all (全部)")
+	addPaginationFlags(myDynamicCmd)
 
 	myCmd.AddCommand(myTaskCmd)
 	myCmd.AddCommand(myBugCmd)

@@ -57,6 +57,9 @@ var projectListCmd = &cobra.Command{
 		if projectProgramID != "" {
 			params.Set("programID", projectProgramID)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.ProjectList(ctx, params)
 		if err != nil {
@@ -153,6 +156,7 @@ func init() {
 	projectListCmd.Flags().StringVar(&projectProductID, "product", "", "关联所属产品 ID")
 	projectListCmd.Flags().StringVar(&projectProgramID, "program", "0", "按项目集 ID 过滤 (0 为全部)")
 	projectListCmd.Flags().StringVar(&projectOrderBy, "order-by", "order_desc", "排序字段 (例如: order_desc, order_asc, id_desc, id_asc, begin_desc, end_desc)")
+	addPaginationFlags(projectListCmd)
 
 	projectParamsCmd.Flags().StringVar(&projectProgramID, "program", "0", "按项目集 ID 过滤 (0 为全部)")
 

@@ -42,6 +42,9 @@ var todoListCmd = &cobra.Command{
 		if todoStatus != "" {
 			params.Set("status", todoStatus)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.TodoList(ctx, params)
 		if err != nil {
@@ -179,6 +182,7 @@ var todoDeleteCmd = &cobra.Command{
 func init() {
 	todoListCmd.Flags().StringVar(&todoType, "type", "all", "待办周期: today (今天), thisWeek (本周), lastWeek (上周), thisMonth (本月), before (逾期待办), future (待定), all (全部)")
 	todoListCmd.Flags().StringVar(&todoStatus, "status", "all", "待办状态: all (全部), wait (未开始), doing (进行中), done (已完成), closed (已关闭)")
+	addPaginationFlags(todoListCmd)
 
 	todoCreateCmd.Flags().StringVar(&todoName, "name", "", "待办名称 / 描述 (必填)")
 	todoCreateCmd.Flags().StringVar(&todoDate, "date", "", "待办日期 (格式: YYYY-MM-DD，默认今天)")

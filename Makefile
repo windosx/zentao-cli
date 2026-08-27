@@ -47,4 +47,4 @@ install-hooks:
 
 clean:
 	@echo "==> Cleaning build artifacts..."
-	rm -rf $(BIN_DIR) $(BINARY_NAME) dist coverage.out coverage.html
+	rm -rf $(BIN_DIR) $(BINARY_NAME) dist coverage.out coverage.html .DS_Store

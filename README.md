@@ -40,7 +40,7 @@
 ## 🌟 核心设计与价值主张
 
 ### 1. 唯一登录认证与全自动无感续约（Zero-Auth Subcommands）
-- **仅需登录一次**：账号密码仅在 `zentao auth login` 执行时使用，随后安全持久化在本地 Profile 中（文件权限严格限制为 `0600`）。
+- **仅需登录一次**：账号密码仅在 `zentao auth login` 执行时使用，密码安全托管于系统原生钥匙串（macOS Keychain / Windows Credential Manager / Linux Secret Service；无桌面钥匙串服务时安全回退至权限受限的本地文件），会话凭据保存在本地 Profile 中。
 - **零凭据污染**：所有业务子命令（`my`, `task`, `bug`, `project`, `product`, `todo` 等）**无需也不允许传递账号密码**。
 - **透明自动恢复**：当服务端 Session 过期时，底层 HTTP 引擎**全自动触发二次握手重新登录、无缝重放业务请求并同步更新本地缓存**，上层调用完全无感。
 
@@ -84,13 +84,18 @@ brew install windosx/tap/zentao-cli
 # 安装后直接使用：zentao
 ```
 
-### 3. Windows (WinGet / Chocolatey)
+### 3. Windows (WinGet / Chocolatey / 手动下载)
 ```powershell
 # 方式 A：WinGet (Windows 10/11 官方推荐)
+# 注意：包已提交至 winget-pkgs 官方仓库，首次发布需通过官方审核合并后生效
 winget install windosx.zentao-cli
 
-# 方式 B：Chocolatey
+# 方式 B：Chocolatey（即将上架）
 choco install zentao-cli
+
+# 方式 C：手动下载（立即可用）
+# 从 GitHub Releases 下载 zentao-cli-<版本>-windows-<架构>.zip，
+# 解压后将 zentao.exe 所在目录加入 PATH 即可使用 zentao 命令
 
 # 安装后直接使用：zentao
 ```
@@ -116,7 +121,7 @@ alias zentao=zentao-cli
 ### 1. 登录并绑定环境（仅需一次）
 
 ```bash
-# 登录禅道服务器 (凭据将加密持久化于 ~/.config/zentao/profiles.json)
+# 登录禅道服务器 (密码存入系统钥匙串，会话持久化于 ~/.config/zentao/profiles.json)
 zentao auth login --url http://zentao.example.com --account testuser --password "Test@123456"
 ```
 
@@ -157,6 +162,10 @@ Flags:
   -k, --insecure             允许非安全的 HTTPS 连接 (忽略 SSL 证书校验)
   -c, --config string        指定配置文件路径 (默认: ~/.config/zentao/config.yaml)
       --timeout string       HTTP 请求超时时长 (默认 "30s")
+
+列表查询通用分页参数（适用于所有 list 系列命令）：
+      --page int             页码，从 1 开始 (默认 1)
+      --limit string         每页返回条数，默认 100；传 all 或 0 表示拉取全量 (默认 "100")
 ```
 
 ---
@@ -267,6 +276,19 @@ zentao auth logout                                           # 注销并清除�
 本项目遵循 **SemVer 2.0 构建元数据规范 (Build Metadata)**，完整版本格式为 `vX.Y.Z+<zentao_version>`（例如 `v1.0.8+21.7`）：
 - `vX.Y.Z`：CLI 与 Go SDK 自身的语义化迭代版本；
 - `+21.7`：所深度对齐与兼容的禅道官方底层 API / PHP SDK 版本。
+
+#### 服务端版本兼容矩阵
+
+| 禅道服务端版本 | 兼容状态 | 说明 |
+|---|---|---|
+| **ZenTao 21.x**（如 `21.7+`） | 🟢 **完全支持 / 已深度验证** | 生产验证版本，全量功能可用（个人工作台、待办看板、活动流、任务/Bug/项目/产品 CRUD） |
+| **ZenTao 20.x** | 🟡 **Best-Effort** | 核心实体与工作台可用，部分较新字段可能缺失 |
+| **ZenTao ≤ 19.x** | ⚪ **未做回归测试** | 基础 CRUD 走早期路由兼容，可能受部分表结构调整影响 |
+
+#### 官方 API 通道评估结论
+
+- **为什么不走官方 RESTful API v1 (`/api.php/v1`)**：经源码级深度审查，API v1 为能力子集，缺少 `my/*`（个人工作台任务/Bug/待办看板）与 `dynamic`（活动流水）等核心生产力端点；且创建/编辑任务等操作无法透传 `keywords` 等表单字段。
+- **关于 API v2 (`/api.php/v2`)**：禅道自 21.7.8+ / 22.x 起引入的 v2 本质上是底层 Web 控制器方法的 RESTful 门面路由。因主流部署（如 21.7.0）未包含 v2，且 v2 的 Token 同样基于 86400 秒生命周期的服务端 Session，本项目统一采用官方 PHP SDK 所使用的原生 Web 控制器 JSON 通道，保证最大范围的向前兼容与全量功能覆盖。
 
 ```bash
 zentao version -o table
@@ -406,9 +428,23 @@ make install-hooks
 
 > ⚠️ **安全红线**：任何真实账号、密码、内网地址**严禁**写入代码、README、测试文件或 `.env.example`。泄漏后应视为已泄露并立即轮换密码。
 
+### 🔒 安全设计与注意事项
+
+1. **凭证存储**：
+   - 生产环境中，`zentao auth login` 会将密码委托给系统原生钥匙串（macOS Keychain、Windows Credential Manager 或 Linux Secret Service）。
+   - 在无图形钥匙串服务的无头 Linux / 容器环境中，会自动降级为权限受限的本地文件存储（`0600` 文件权限）；亦可设置环境变量 `ZENTAO_NO_KEYRING=1` 显式控制。
+2. **删除操作与 HTTP 语义**：
+   - `task delete`、`bug delete`、`todo delete` 遵循禅道原生路由设计（带 `confirm=yes` 的控制路由），在某些反向代理或具有主动预取策略的中间网关环境下，请确保该类路由不被预加载。
+
 ---
 
 ## 📄 开源许可证
 
-本项目基于 [MIT License](LICENSE) 开源发布。
+本项目采用双许可结构：
+
+- **仓库整体**（`cmd/`、`internal/`、构建与发布配置等）：基于 [MIT License](LICENSE) 开源发布。
+- **`pkg/zentao`（Go 语言 ZenTao 客户端）**：移植自禅道官方 PHP SDK（`zentaopms_21.7_20250516` 的 `sdk/php/zentao.php`），作为衍生作品遵循 [Z Public License (ZPL) 1.2](LICENSE-ZPL) 分发，并保留上游版权署名（详见 [NOTICE](NOTICE)）。
+
+> 说明：ZPL 1.2 允许商业与非商业使用、修改及再分发；基于禅道 HTTP API 独立开发的应用本可按 ZPL 第 7 条使用自有许可证，但 `pkg/zentao` 包含移植自官方 SDK 的代码逻辑，故谨慎地采用 ZPL 1.2。
+
 欢迎提交 Issue 与 Pull Request！

@@ -75,3 +75,6 @@ metadata:
    - 在构造复杂的 `task create` 或 `bug create` 前，推荐先调用 `zentao task params --project <id>` 或 `zentao bug params --product <id>` 获取项目/产品下的真实模块 ID、指派人列表和构建版本。
 4. **写操作回读确认**：
    - 任何写操作（`create`、`finish`、`resolve`、`close`）执行成功后，推荐调用对应模块的 `list` 命令进行一次回读验证，确保流转结果准确。
+5. **分页控制**：
+   - 所有列表查询命令默认返回前 100 条（`--limit 100`，`--page 1`）。
+   - 如需拉取全量数据，传递 `--limit all`；如需遍历后续页，传递 `--page <页码>`。

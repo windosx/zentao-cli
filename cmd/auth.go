@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/windosx/zentao-cli/internal/config"
+	"github.com/windosx/zentao-cli/internal/secret"
 	"github.com/windosx/zentao-cli/pkg/zentao"
 )
 
@@ -22,6 +23,7 @@ var (
 	loginPassword   string
 	loginAccessMode string
 	profileName     string
+	showSecrets     bool
 )
 
 var authLoginCmd = &cobra.Command{
@@ -74,12 +76,13 @@ var authLoginCmd = &cobra.Command{
 			return err
 		}
 
-		// 1. Save profile and session cache with credentials for transparent auto-relogin
+		// 1. Save profile and session cache with credentials
+		_ = secret.Set(loginClient.BaseURL, loginClient.Account, loginPassword)
 		_ = config.SaveProfile(config.Profile{
-			Name:       profileName,
-			URL:        loginClient.BaseURL,
-			Account:    loginClient.Account,
-			Password:   loginPassword,
+			Name:    profileName,
+			URL:     loginClient.BaseURL,
+			Account: loginClient.Account,
+			// Password saved in keyring, not in profiles.json
 			Cookie:     loginClient.Cookie,
 			Rand:       loginClient.GetRand(),
 			AccessMode: loginClient.AccessMode,
@@ -104,11 +107,15 @@ var authLoginCmd = &cobra.Command{
 		client.Cookie = loginClient.Cookie
 		client.SetRand(loginClient.GetRand())
 
+		displayCookie := maskCookie(loginClient.Cookie)
+		if showSecrets {
+			displayCookie = loginClient.Cookie
+		}
 		return printer.Success(map[string]any{
 			"status":  "logged_in",
 			"url":     loginClient.BaseURL,
 			"account": loginClient.Account,
-			"cookie":  loginClient.Cookie,
+			"cookie":  displayCookie,
 			"message": "登录成功，凭据与会话已持久化存储。服务端 Session 超时后将自动无感刷新，无需再次手动登录。",
 		})
 	},
@@ -183,13 +190,17 @@ var authStatusCmd = &cobra.Command{
 			return err
 		}
 
+		displayCookie := maskCookie(client.Cookie)
+		if showSecrets {
+			displayCookie = client.Cookie
+		}
 		return printer.Success(map[string]any{
 			"status":      "authenticated",
 			"url":         client.BaseURL,
 			"account":     client.Account,
 			"accessMode":  client.AccessMode,
 			"hasCookie":   client.Cookie != "",
-			"sessionInfo": client.Cookie,
+			"sessionInfo": displayCookie,
 		})
 	},
 }
@@ -202,12 +213,13 @@ var authLogoutCmd = &cobra.Command{
 			return err
 		}
 		if client != nil {
+			_ = secret.Delete(client.BaseURL, client.Account)
 			client.Cookie = ""
 			client.Password = ""
 		}
 		return printer.Success(map[string]any{
 			"status":  "logged_out",
-			"message": "本地会话缓存已成功清除",
+			"message": "本地会话缓存与钥匙串凭证已清除",
 		})
 	},
 }
@@ -218,8 +230,11 @@ func init() {
 	authLoginCmd.Flags().StringVarP(&loginPassword, "password", "p", "", "登录密码 (必填)")
 	authLoginCmd.Flags().StringVarP(&loginAccessMode, "access-mode", "m", "GET", "路由模式: GET 或 PATH_INFO")
 	authLoginCmd.Flags().StringVar(&profileName, "name", "", "自定义 Profile 命名 (可选)")
+	authLoginCmd.Flags().BoolVar(&showSecrets, "show-secrets", false, "在输出中显示完整会话 Cookie (默认脱敏)")
 
 	authSwitchCmd.Flags().StringVar(&profileName, "name", "", "要切换的目标 Profile 名称 (必填)")
+
+	authStatusCmd.Flags().BoolVar(&showSecrets, "show-secrets", false, "在输出中显示完整会话 Cookie (默认脱敏)")
 
 	authCmd.AddCommand(authLoginCmd)
 	authCmd.AddCommand(authListCmd)
