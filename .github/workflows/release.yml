@@ -96,9 +96,8 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          # --skip=publish: 跳过 GitHub Release 上传（主 job 已完成）
-          # --skip=validate,announce,sbom: 跳过无需重复或 windows 上缺失工具的步骤
-          args: release --clean --skip=publish,validate,announce,sbom
+          # 跳过 GitHub Release 上传（主 job 已完成）及所有 windows 上不可用/不必要的步骤
+          args: release --clean --skip=publish,validate,announce,sbom,homebrew,winget,sign
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
@@ -109,6 +108,17 @@ jobs:
           $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" -Recurse | Select-Object -First 1
           if (-not $nupkg) { Write-Error "No .nupkg found in dist/"; exit 1 }
           Write-Host "==> Pushing $($nupkg.Name) to Chocolatey..."
-          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+          $maxRetries = 3
+          for ($i = 1; $i -le $maxRetries; $i++) {
+            choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($i -lt $maxRetries) {
+              Write-Host "==> Push failed (attempt $i/$maxRetries), retrying in 30s..."
+              Start-Sleep -Seconds 30
+            } else {
+              Write-Error "==> Push failed after $maxRetries attempts"
+              exit 1
+            }
+          }
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
