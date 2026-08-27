@@ -124,11 +124,16 @@ chocolateys:
     bug_tracker_url: "https://github.com/windosx/zentao-cli/issues"
     license_url: "https://github.com/windosx/zentao-cli/blob/main/LICENSE"
     require_license_acceptance: false
-    summary: "ZenTao PMS CLI and Go SDK"
+    summary: "ZenTao PMS CLI and Go SDK for AI coding agents and modern developers"
     description: |
-      ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
-      Provides zero-auth persistent sessions and full workbench support.
-    tags: "zentao zentao-cli cli sdk project-management agile"
+      ZenTao PMS (禅道) CLI tool and Go SDK designed for AI coding agents (Claude Code, ZCode, Cursor, OpenHands) and modern developers.
+
+      Key Features:
+      - Zero-Auth Persistent Sessions: Single login via system keychain with transparent session auto-refresh when server sessions expire.
+      - Full Workbench Support: Complete coverage for personal tasks, assigned bugs, todos, stories, projects, products, and activity dynamics.
+      - Agent-Ready Structured Output: Unified JSON envelopes, ASCII tables, and deterministic exit codes.
+      - Universal ZenTao Version Compatibility: Direct alignment with ZenTao native web controllers and PHP SDK across legacy and modern versions.
+    tags: "zentao zentao-cli cli sdk project-management agile bug-tracker automation ai-agent"
     skip_publish: false
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"

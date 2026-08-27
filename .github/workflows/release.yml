@@ -106,42 +106,34 @@ jobs:
       - name: Push nupkg to Chocolatey
         shell: pwsh
         run: |
-          $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" -Recurse | Select-Object -First 1
-          if (-not $nupkg) { Write-Error "No .nupkg found in dist/"; exit 1 }
-          Write-Host "==> Found package: $($nupkg.Name)"
-          
-          # Chocolatey / NuGet v2 规范严禁版本号中包含 '+'
-          # 自动将 .nupkg 文件名与内部 .nuspec 的 <version> 中的 '+' 剥离为纯数字版本 (如 1.1.0+21.7 -> 1.1.0)
-          $targetPath = $nupkg.FullName
-          if ($nupkg.Name -match "\+") {
-            $cleanedName = $nupkg.Name -replace '\+.*\.nupkg$', '.nupkg'
-            $cleanedPath = Join-Path $nupkg.DirectoryName $cleanedName
+          # 1. 在 dist/ 目录中定位 GoReleaser 生成的原始 .nuspec 文件
+          $nuspecFile = Get-ChildItem -Path dist -Filter "*.nuspec" -Recurse | Select-Object -First 1
+          if ($nuspecFile) {
+            Write-Host "==> Normalizing NuGet v2 version in $($nuspecFile.FullName)..."
+            $content = Get-Content $nuspecFile.FullName -Raw
+            # 剥离 SemVer 2.0 的 '+' build metadata，例如将 1.1.0+21.7 转为符合 NuGet v2 规范的 1.1.0
+            $content = $content -replace '<version>([^<+]+)\+[^<]*</version>', '<version>$1</version>'
+            Set-Content -Path $nuspecFile.FullName -Value $content -NoNewline
             
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $tempExtract = Join-Path $env:TEMP "choco_fix_$([Guid]::NewGuid().ToString('N'))"
-            [System.IO.Compression.ZipFile]::ExtractToDirectory($nupkg.FullName, $tempExtract)
-            
-            $nuspec = Get-ChildItem -Path $tempExtract -Filter "*.nuspec" | Select-Object -First 1
-            if ($nuspec) {
-              $content = Get-Content $nuspec.FullName -Raw
-              $content = $content -replace '<version>([^<+]+)\+[^<]*</version>', '<version>$1</version>'
-              Set-Content -Path $nuspec.FullName -Value $content -NoNewline
-            }
-            
-            if (Test-Path $cleanedPath) { Remove-Item $cleanedPath -Force }
-            [System.IO.Compression.ZipFile]::CreateFromDirectory($tempExtract, $cleanedPath)
-            Remove-Item $tempExtract -Recurse -Force
-            $targetPath = $cleanedPath
-            Write-Host "==> Normalized package to NuGet v2 format: $cleanedName"
+            # 使用 choco.exe 原生重新打包，确保 ZIP/OPC 格式与清单哈希 100% 正确
+            Write-Host "==> Repacking with choco.exe..."
+            choco pack $nuspecFile.FullName --outputdirectory dist
           }
 
-          Write-Host "==> Pushing $targetPath to Chocolatey..."
+          # 2. 找到打包后的标准 .nupkg 文件（优先选取无 '+' 的标准包）
+          $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" | Where-Object { $_.Name -notmatch "\+" } | Select-Object -First 1
+          if (-not $nupkg) {
+            $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" -Recurse | Select-Object -First 1
+          }
+          if (-not $nupkg) { Write-Error "No .nupkg found in dist/"; exit 1 }
+          Write-Host "==> Target package for upload: $($nupkg.FullName)"
+
+          # 3. 推送到 Chocolatey
           $maxRetries = 3
           $success = $false
           for ($i = 1; $i -le $maxRetries; $i++) {
-            # 优先使用 curl.exe 直接向 NuGet v2 端点发起 PUT 请求，绕过 choco CLI 握手在 Cloudflare 上的 504 超时
-            Write-Host "==> Attempting direct NuGet v2 API upload via curl.exe (attempt $i/$maxRetries)..."
-            $curlOut = & curl.exe -s -S -X PUT -H "X-NuGet-ApiKey: $($env:CHOCOLATEY_API_KEY)" -F "package=@$targetPath" https://push.chocolatey.org/api/v2/package/ 2>&1
+            Write-Host "==> Uploading via direct NuGet v2 API with curl.exe (attempt $i/$maxRetries)..."
+            $curlOut = & curl.exe -s -S -X PUT -H "X-NuGet-ApiKey: $($env:CHOCOLATEY_API_KEY)" -F "package=@$($nupkg.FullName)" https://push.chocolatey.org/api/v2/package/ 2>&1
             Write-Host "Response: $curlOut"
             if ($curlOut -match "Package has been pushed" -or $curlOut -match "created" -or $curlOut -match "201") {
               Write-Host "==> Successfully pushed to Chocolatey via NuGet API!"
@@ -149,9 +141,8 @@ jobs:
               break
             }
 
-            # 备用方案：choco push
-            Write-Host "==> Direct API push returned unexpected response, trying choco push fallback..."
-            choco push $targetPath --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+            Write-Host "==> Direct API push returned non-success response, trying choco push fallback..."
+            choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
             if ($LASTEXITCODE -eq 0) {
               $success = $true
               break
@@ -163,7 +154,7 @@ jobs:
             }
           }
           if (-not $success) {
-            Write-Error "==> Push failed after $maxRetries attempts"
+            Write-Error "==> Chocolatey push failed after $maxRetries attempts"
             exit 1
           }
         env:
