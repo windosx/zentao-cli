@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 # 仅在 windows-latest runner 上运行，用于打包并推送 Chocolatey nupkg。
-# 触发方式：goreleaser release --clean --config .goreleaser.choco.yaml
+# 不创建/修改 GitHub Release（由主 goreleaser job 负责）。
 version: 2
 project_name: zentao-cli
 
@@ -58,11 +58,6 @@ chocolateys:
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
 
+# 不创建 GitHub Release，不上传 assets；由主 goreleaser job 负责
 release:
-  github:
-    owner: windosx
-    name: zentao-cli
-  draft: false
-  prerelease: auto
-  # 复用已存在的 release，仅追加 chocolatey 相关产物
-  mode: keep-existing
+  disable: true
