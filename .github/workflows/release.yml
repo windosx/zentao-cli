@@ -96,9 +96,9 @@ jobs:
         with:
           distribution: goreleaser
           version: '~> v2'
-          # --skip=publish 跳过 GitHub Release 上传（主 job 已完成）
-          # --skip=validate 跳过 dirty worktree 等检查（已由主 job 验证）
-          args: release --clean --skip=publish,validate,announce
+          # --skip=publish: 跳过 GitHub Release 上传（主 job 已完成）
+          # --skip=validate,announce,sbom: 跳过无需重复或 windows 上缺失工具的步骤
+          args: release --clean --skip=publish,validate,announce,sbom
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
