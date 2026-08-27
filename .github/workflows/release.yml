@@ -137,16 +137,34 @@ jobs:
 
           Write-Host "==> Pushing $targetPath to Chocolatey..."
           $maxRetries = 3
+          $success = $false
           for ($i = 1; $i -le $maxRetries; $i++) {
+            # 优先使用 curl.exe 直接向 NuGet v2 端点发起 PUT 请求，绕过 choco CLI 握手在 Cloudflare 上的 504 超时
+            Write-Host "==> Attempting direct NuGet v2 API upload via curl.exe (attempt $i/$maxRetries)..."
+            $curlOut = & curl.exe -s -S -X PUT -H "X-NuGet-ApiKey: $($env:CHOCOLATEY_API_KEY)" -F "package=@$targetPath" https://push.chocolatey.org/api/v2/package/ 2>&1
+            Write-Host "Response: $curlOut"
+            if ($curlOut -match "Package has been pushed" -or $curlOut -match "created" -or $curlOut -match "201") {
+              Write-Host "==> Successfully pushed to Chocolatey via NuGet API!"
+              $success = $true
+              break
+            }
+
+            # 备用方案：choco push
+            Write-Host "==> Direct API push returned unexpected response, trying choco push fallback..."
             choco push $targetPath --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
-            if ($LASTEXITCODE -eq 0) { break }
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+
             if ($i -lt $maxRetries) {
               Write-Host "==> Push failed (attempt $i/$maxRetries), retrying in 30s..."
               Start-Sleep -Seconds 30
-            } else {
-              Write-Error "==> Push failed after $maxRetries attempts"
-              exit 1
             }
+          }
+          if (-not $success) {
+            Write-Error "==> Push failed after $maxRetries attempts"
+            exit 1
           }
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
