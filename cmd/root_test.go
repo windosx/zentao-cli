@@ -3,11 +3,14 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/windosx/zentao-cli/internal/config"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+
+	"github.com/windosx/zentao-cli/internal/config"
+	"github.com/windosx/zentao-cli/internal/output"
 )
 
 func TestRootCmd_Help(t *testing.T) {
@@ -50,6 +53,12 @@ func TestVersionCmd(t *testing.T) {
 	}
 	if !bytes.Contains([]byte(out), []byte(`"sdkVersion": "zentaopms_21.7_20250516"`)) {
 		t.Errorf("expected sdkVersion in version output: %s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte(`"zentaoCompat": "v21.7+"`)) {
+		t.Errorf("expected zentaoCompat in version output: %s", out)
+	}
+	if !bytes.Contains([]byte(out), []byte(`"fullVersion": "`)) {
+		t.Errorf("expected fullVersion in version output: %s", out)
 	}
 }
 
@@ -243,6 +252,8 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "todo finished"})
 		case m == "todo" && f == "close":
 			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "todo closed"})
+		case m == "todo" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "todo deleted"})
 		case m == "dept" && f == "browse":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","name":"Dev"}]`})
 		case m == "dept" && f == "manageChild":
@@ -250,15 +261,27 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 		case m == "company" && f == "browse":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","account":"dev1"}]`})
 		case m == "user" && f == "create":
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "user created"})
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{"depts":[]}`})
+			} else {
+				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "user created"})
+			}
 		case m == "product" && f == "all" || m == "product" && f == "browse":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","name":"App"}]`})
 		case m == "product" && f == "create":
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "product created"})
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{"products":[]}`})
+			} else {
+				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "product created"})
+			}
 		case m == "project" && f == "browse" || m == "project" && f == "all" || m == "execution" && f == "all":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","name":"Sprint 1"}]`})
 		case m == "project" && f == "create":
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "project created"})
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{"allProducts":[]}`})
+			} else {
+				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "project created"})
+			}
 		case m == "project" && f == "task" || m == "execution" && f == "task":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","name":"Task 1"}]`})
 		case m == "task" && f == "create":
@@ -268,7 +291,13 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "task created"})
 			}
 		case m == "task" && f == "finish":
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "task finished"})
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{"task":{"id":"1"}}`})
+			} else {
+				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "task finished"})
+			}
+		case m == "task" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "task deleted"})
 		case m == "bug" && f == "browse":
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `[{"id":"1","title":"Bug 1"}]`})
 		case m == "bug" && f == "create":
@@ -278,7 +307,13 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "bug created"})
 			}
 		case m == "bug" && f == "resolve":
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "bug resolved"})
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{"bug":{"id":"1"}}`})
+			} else {
+				_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "bug resolved"})
+			}
+		case m == "bug" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "bug deleted"})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -313,22 +348,30 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 		{"todo start", []string{"todo", "start", "--id", "301"}},
 		{"todo finish", []string{"todo", "finish", "--id", "301"}},
 		{"todo close", []string{"todo", "close", "--id", "301"}},
+		{"todo delete", []string{"todo", "delete", "--id", "301"}},
 		{"dept list", []string{"dept", "list"}},
 		{"dept add", []string{"dept", "add", "--parent", "1", "--name", "Frontend"}},
 		{"user list", []string{"user", "list"}},
+		{"user params", []string{"user", "params", "--dept", "1"}},
 		{"user add", []string{"user", "add", "--username", "tom", "--user-password", "pwd123", "--realname", "Tom"}},
 		{"product list", []string{"product", "list"}},
+		{"product params", []string{"product", "params", "--program", "1"}},
 		{"product add", []string{"product", "add", "--name", "Web", "--code", "web"}},
 		{"project list", []string{"project", "list"}},
+		{"project params", []string{"project", "params", "--program", "1"}},
 		{"project add", []string{"project", "add", "--name", "Sprint 2", "--code", "s2"}},
 		{"task list", []string{"task", "list", "--project", "1"}},
 		{"task params", []string{"task", "params", "--project", "1"}},
 		{"task create", []string{"task", "create", "--project", "1", "--name", "Implement Feature"}},
+		{"task finish-params", []string{"task", "finish-params", "--id", "1"}},
 		{"task finish", []string{"task", "finish", "--id", "1", "--real", "2.0"}},
+		{"task delete", []string{"task", "delete", "--project", "1", "--id", "1"}},
 		{"bug list", []string{"bug", "list", "--product", "1"}},
 		{"bug params", []string{"bug", "params", "--product", "1"}},
 		{"bug create", []string{"bug", "create", "--product", "1", "--title", "Fix CSS"}},
+		{"bug resolve-params", []string{"bug", "resolve-params", "--id", "1"}},
 		{"bug resolve", []string{"bug", "resolve", "--id", "1", "--resolution", "fixed"}},
+		{"bug delete", []string{"bug", "delete", "--id", "1"}},
 	}
 
 	for _, tc := range testCases {
@@ -349,5 +392,67 @@ func TestAuthLogin_And_SubcommandsFlow(t *testing.T) {
 				t.Fatalf("command %q returned ok != true: %s", tc.name, buf.String())
 			}
 		})
+	}
+}
+
+func TestClassifyError_And_ValidationErrors(t *testing.T) {
+	// 1. Test classifyError directly
+	if code, cat := classifyError(nil); code != output.ExitCodeSuccess || cat != "none" {
+		t.Errorf("unexpected success classification: code=%d, cat=%s", code, cat)
+	}
+	if code, cat := classifyError(fmt.Errorf("session timeout please login")); code != output.ExitCodeAuth || cat != "auth" {
+		t.Errorf("unexpected auth classification: code=%d, cat=%s", code, cat)
+	}
+	if code, cat := classifyError(fmt.Errorf("--name is required")); code != output.ExitCodeValidation || cat != "validation" {
+		t.Errorf("unexpected validation classification: code=%d, cat=%s", code, cat)
+	}
+	if code, cat := classifyError(fmt.Errorf("internal server error")); code != output.ExitCodeAPI || cat != "api" {
+		t.Errorf("unexpected api classification: code=%d, cat=%s", code, cat)
+	}
+
+	// 2. Test unauthenticated command execution in clean environment
+	t.Setenv("HOME", t.TempDir())
+	flagOpts = config.Options{}
+	buf := new(bytes.Buffer)
+	RootCmd.SetOut(buf)
+	RootCmd.SetErr(buf)
+	RootCmd.SetArgs([]string{"my", "task", "-o", "json"})
+	err := RootCmd.Execute()
+	if err == nil {
+		t.Fatalf("expected unauthenticated error when running my task without login, got nil")
+	}
+
+	// 3. Test missing required flags
+	validationCases := [][]string{
+		{"product", "add"},
+		{"project", "add"},
+		{"dept", "add"},
+		{"user", "add"},
+		{"task", "list"},
+		{"task", "params"},
+		{"task", "create"},
+		{"task", "finish"},
+		{"task", "finish-params"},
+		{"task", "delete"},
+		{"bug", "list"},
+		{"bug", "params"},
+		{"bug", "create"},
+		{"bug", "resolve"},
+		{"bug", "resolve-params"},
+		{"bug", "delete"},
+		{"todo", "create"},
+		{"todo", "start"},
+		{"todo", "finish"},
+		{"todo", "close"},
+		{"todo", "delete"},
+	}
+
+	for _, args := range validationCases {
+		buf.Reset()
+		flagOpts = config.Options{}
+		RootCmd.SetArgs(append(args, "-o", "json"))
+		if err := RootCmd.Execute(); err == nil {
+			t.Errorf("expected error for command %v without required flags, got nil", args)
+		}
 	}
 }

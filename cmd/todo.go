@@ -155,6 +155,27 @@ var todoCloseCmd = &cobra.Command{
 	},
 }
 
+var todoDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "删除指定待办事项",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if todoID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.TodoDelete(ctx, todoID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 func init() {
 	todoListCmd.Flags().StringVar(&todoType, "type", "all", "待办周期: today (今天), thisWeek (本周), lastWeek (上周), thisMonth (本月), before (逾期待办), future (待定), all (全部)")
 	todoListCmd.Flags().StringVar(&todoStatus, "status", "all", "待办状态: all (全部), wait (未开始), doing (进行中), done (已完成), closed (已关闭)")
@@ -169,10 +190,12 @@ func init() {
 	todoStartCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
 	todoFinishCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
 	todoCloseCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
+	todoDeleteCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
 
 	todoCmd.AddCommand(todoListCmd)
 	todoCmd.AddCommand(todoCreateCmd)
 	todoCmd.AddCommand(todoStartCmd)
 	todoCmd.AddCommand(todoFinishCmd)
 	todoCmd.AddCommand(todoCloseCmd)
+	todoCmd.AddCommand(todoDeleteCmd)
 }

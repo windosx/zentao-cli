@@ -187,3 +187,111 @@ func TestPrinter_Fail(t *testing.T) {
 		t.Errorf("unexpected error info: %+v", resp.Error)
 	}
 }
+
+func TestPrinter_Fail_AllFormats(t *testing.T) {
+	// 1. Fail YAML
+	var stderrYAML bytes.Buffer
+	pYAML := New("yaml")
+	pYAML.Err = &stderrYAML
+	pYAML.Fail(ExitCodeValidation, "validation", "invalid param", nil)
+	if !strings.Contains(stderrYAML.String(), "outcome: failure") {
+		t.Errorf("expected yaml failure envelope, got %s", stderrYAML.String())
+	}
+
+	// 2. Fail Table
+	var stderrTable bytes.Buffer
+	pTable := New("table")
+	pTable.Err = &stderrTable
+	pTable.Fail(ExitCodeAPI, "api", "server down", "timeout error")
+	if !strings.Contains(stderrTable.String(), "Error [api]: server down") || !strings.Contains(stderrTable.String(), "timeout error") {
+		t.Errorf("expected table error output, got %s", stderrTable.String())
+	}
+}
+
+func TestPrinter_Success_VariousEntities_And_Fallback(t *testing.T) {
+	// 1. Todo text formatting
+	pText := New("text")
+	var stdoutText bytes.Buffer
+	pText.Out = &stdoutText
+
+	todoData := map[string]any{
+		"todos": []map[string]any{
+			{"id": "301", "name": "Write Doc", "status": "wait", "date": "2026-08-27", "begin": "0900", "end": "1800", "pri": 2, "type": "custom"},
+		},
+	}
+	if err := pText.Success(todoData); err != nil {
+		t.Fatalf("todo text failed: %v", err)
+	}
+	if !strings.Contains(stdoutText.String(), "#301 Write Doc") {
+		t.Errorf("unexpected todo text: %s", stdoutText.String())
+	}
+
+	// 2. Story text formatting
+	stdoutText.Reset()
+	storyData := map[string]any{
+		"stories": []map[string]any{
+			{"id": "401", "title": "User login", "status": "active", "pri": "1", "estimate": "5", "assignedTo": "dev1", "openedBy": "po1"},
+		},
+	}
+	if err := pText.Success(storyData); err != nil {
+		t.Fatalf("story text failed: %v", err)
+	}
+	if !strings.Contains(stdoutText.String(), "#401 User login") {
+		t.Errorf("unexpected story text: %s", stdoutText.String())
+	}
+
+	// 3. User and Dept table formatting
+	pTable := New("table")
+	var stdoutTable bytes.Buffer
+	pTable.Out = &stdoutTable
+
+	userData := map[string]any{
+		"users": []map[string]any{
+			{"id": "501", "account": "tom", "realname": "Tom Cat", "role": "dev", "email": "tom@test.com", "gender": "m", "mobile": "13800000000"},
+		},
+	}
+	if err := pTable.Success(userData); err != nil {
+		t.Fatalf("user table failed: %v", err)
+	}
+	if !strings.Contains(stdoutTable.String(), "ACCOUNT") || !strings.Contains(stdoutTable.String(), "Tom Cat") {
+		t.Errorf("unexpected user table: %s", stdoutTable.String())
+	}
+
+	// 4. Fallback arbitrary columns table formatting
+	stdoutTable.Reset()
+	customData := []map[string]any{
+		{"custom_key": "custom_val", "foo": "bar"},
+	}
+	if err := pTable.Success(customData); err != nil {
+		t.Fatalf("custom table failed: %v", err)
+	}
+	if !strings.Contains(stdoutTable.String(), "CUSTOM_KEY") || !strings.Contains(stdoutTable.String(), "custom_val") {
+		t.Errorf("unexpected custom table: %s", stdoutTable.String())
+	}
+
+	// 5. Empty slice & empty map
+	stdoutTable.Reset()
+	if err := pTable.Success([]map[string]any{}); err != nil {
+		t.Fatalf("empty table failed: %v", err)
+	}
+	if !strings.Contains(stdoutTable.String(), "(empty list)") {
+		t.Errorf("expected (empty list), got %s", stdoutTable.String())
+	}
+
+	stdoutTable.Reset()
+	if err := pTable.Success(map[string]any{}); err != nil {
+		t.Fatalf("empty map table failed: %v", err)
+	}
+	if !strings.Contains(stdoutTable.String(), "(empty)") {
+		t.Errorf("expected (empty), got %s", stdoutTable.String())
+	}
+
+	// 6. Plain string in printText
+	stdoutText.Reset()
+	if err := pText.Success("plain string output"); err != nil {
+		t.Fatalf("plain string failed: %v", err)
+	}
+	if !strings.Contains(stdoutText.String(), "plain string output") {
+		t.Errorf("unexpected string output: %s", stdoutText.String())
+	}
+}

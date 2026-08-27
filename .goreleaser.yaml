@@ -53,40 +53,7 @@ archives:
       - LICENSE*
       - skills/**/*
 
-# 1. Linux DEB / RPM 包 (APT / DNF 源)
-nfpms:
-  - id: zentao-cli
-    package_name: zentao-cli
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    vendor: windosx
-    maintainer: "windosx <windosx@163.com>"
-    homepage: "https://github.com/windosx/zentao-cli"
-    description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    license: MIT
-    section: utils
-    priority: optional
-    formats:
-      - deb
-      - rpm
-    bindir: /usr/bin
-    umask: 0o022
-    overrides:
-      deb:
-        contents:
-          - src: ./LICENSE
-            dst: /usr/share/doc/zentao-cli/copyright
-          - src: ./README.md
-            dst: /usr/share/doc/zentao-cli/README.md
-      rpm:
-        contents:
-          - src: ./LICENSE
-            dst: /usr/share/doc/zentao-cli/LICENSE
-            type: license
-          - src: ./README.md
-            dst: /usr/share/doc/zentao-cli/README.md
-            type: readme
-
-# 2. Homebrew (macOS / Linux) - v2 homebrew_casks
+# 1. Homebrew (macOS / Linux) - v2 homebrew_casks
 homebrew_casks:
   - name: zentao-cli
     repository:
@@ -105,7 +72,7 @@ homebrew_casks:
     binaries:
       - zentao
 
-# 3. Windows Package Manager (WinGet)
+# 2. Windows Package Manager (WinGet)
 winget:
   - name: zentao-cli
     package_name: zentao-cli
@@ -136,7 +103,7 @@ winget:
       name: windosx
       email: windosx@163.com
 
-# 4. Chocolatey for Windows (需在 windows-latest runner 上构建)
+# 3. Chocolatey for Windows (需在 windows-latest runner 上构建)
 chocolateys:
   - name: zentao-cli
     title: ZenTao CLI

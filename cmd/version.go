@@ -14,6 +14,8 @@ var (
 	Version = "dev"
 	// SDKVersion is the compatible ZenTao PMS SDK release version.
 	SDKVersion = "zentaopms_21.7_20250516"
+	// ZenTaoCompat is the target ZenTao PMS major/minor version compatibility.
+	ZenTaoCompat = "21.7"
 	// GitCommit is set at compile time.
 	GitCommit = "HEAD"
 	// BuildDate is set at compile time.
@@ -46,14 +48,22 @@ var versionCmd = &cobra.Command{
 	Short: "查看版本与构建信息",
 	Long:  "输出 zentao-cli 版本号、兼容的禅道官方 SDK 版本、Git Commit 及构建环境信息。",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ver := resolveVersion()
+		fullVer := ver
+		if !strings.Contains(ver, "+") {
+			fullVer = ver + "+" + ZenTaoCompat
+		}
+
 		info := map[string]any{
-			"version":    resolveVersion(),
-			"sdkVersion": SDKVersion,
-			"gitCommit":  GitCommit,
-			"buildDate":  BuildDate,
-			"goVersion":  runtime.Version(),
-			"os":         runtime.GOOS,
-			"arch":       runtime.GOARCH,
+			"version":      ver,
+			"fullVersion":  fullVer,
+			"zentaoCompat": "v" + ZenTaoCompat + "+",
+			"sdkVersion":   SDKVersion,
+			"gitCommit":    GitCommit,
+			"buildDate":    BuildDate,
+			"goVersion":    runtime.Version(),
+			"os":           runtime.GOOS,
+			"arch":         runtime.GOARCH,
 		}
 		return printer.Success(info)
 	},

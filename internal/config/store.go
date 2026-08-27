@@ -211,6 +211,9 @@ func DeleteProfile(name string) error {
 	if err != nil {
 		return err
 	}
+	if _, exists := s.Profiles[name]; !exists {
+		return fmt.Errorf("profile %q not found", name)
+	}
 	delete(s.Profiles, name)
 	if s.ActiveProfile == name {
 		s.ActiveProfile = ""

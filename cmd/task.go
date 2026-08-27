@@ -138,6 +138,27 @@ var taskCreateCmd = &cobra.Command{
 	},
 }
 
+var taskFinishParamsCmd = &cobra.Command{
+	Use:   "finish-params",
+	Short: "获取完成任务所需的元数据字典与当前任务状态",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if taskID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.TaskFinishParams(ctx, taskID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 var taskFinishCmd = &cobra.Command{
 	Use:   "finish",
 	Short: "完成并关闭任务",
@@ -183,6 +204,32 @@ var taskFinishCmd = &cobra.Command{
 	},
 }
 
+var taskDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "删除指定任务",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if taskID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		projectID := taskProjectID
+		if projectID == "" {
+			projectID = "0"
+		}
+
+		data, err := client.TaskDelete(ctx, projectID, taskID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 func init() {
 	taskListCmd.Flags().StringVar(&taskProjectID, "project", "", "所属项目 ID 或 执行/迭代 ID (必填)")
 	taskListCmd.Flags().StringVar(&taskStatus, "status", "all", "任务状态过滤: all (全部), undone/unclosed (未完成), wait (未开始), doing (进行中), done (已完成), pause (已暂停), cancel (已取消), closed (已关闭), needconfirm (需求变动待确认)")
@@ -205,8 +252,15 @@ func init() {
 	taskFinishCmd.Flags().StringVar(&taskComment, "comment", "", "完成备注说明")
 	taskFinishCmd.Flags().StringVar(&taskFinishedDate, "finished-date", "", "实际完成日期与时间 (格式: YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS)")
 
+	taskFinishParamsCmd.Flags().StringVar(&taskID, "id", "", "要完成的任务 ID (必填)")
+
+	taskDeleteCmd.Flags().StringVar(&taskID, "id", "", "要删除的任务 ID (必填)")
+	taskDeleteCmd.Flags().StringVar(&taskProjectID, "project", "0", "所属项目 ID 或 执行/迭代 ID")
+
 	taskCmd.AddCommand(taskListCmd)
 	taskCmd.AddCommand(taskParamsCmd)
 	taskCmd.AddCommand(taskCreateCmd)
+	taskCmd.AddCommand(taskFinishParamsCmd)
 	taskCmd.AddCommand(taskFinishCmd)
+	taskCmd.AddCommand(taskDeleteCmd)
 }

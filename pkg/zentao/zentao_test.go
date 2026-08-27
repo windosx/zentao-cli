@@ -378,3 +378,233 @@ func TestClient_TaskAndBugFlow(t *testing.T) {
 		t.Fatalf("BugResolve failed: %v", err)
 	}
 }
+
+func TestClient_OfficialSDK_AllCreateParamsAndDeletes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m := r.URL.Query().Get("m")
+		f := r.URL.Query().Get("f")
+
+		switch {
+		case m == "user" && f == "create" && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"depts":[{"id":"1","name":"Dev"}],"rand":"userrand123"}`,
+			})
+		case m == "product" && f == "create" && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"products":[],"poUsers":{"admin":"Admin"}}`,
+			})
+		case m == "project" && f == "create" && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"allProducts":[{"id":"1","name":"P1"}]}`,
+			})
+		case m == "task" && f == "finish" && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"task":{"id":"101","name":"T1"}}`,
+			})
+		case m == "bug" && f == "resolve" && r.Method == http.MethodGet:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"bug":{"id":"201","title":"B1"}}`,
+			})
+		case m == "task" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"result":"success"}`,
+			})
+		case m == "bug" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"result":"success"}`,
+			})
+		case m == "todo" && f == "delete":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"result":"success"}`,
+			})
+		case m == "dept" && f == "browse":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"tree":[{"id":"1","name":"Root Dept"}]}`,
+			})
+		case m == "dept" && f == "manageChild":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"result":"success"}`,
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := New(Config{URL: server.URL})
+	ctx := context.Background()
+
+	// 1. UserCreateParams (also verifies rand update)
+	uParams, err := client.UserCreateParams(ctx, "1")
+	if err != nil {
+		t.Fatalf("UserCreateParams failed: %v", err)
+	}
+	if len(uParams) == 0 || client.GetRand() != "userrand123" {
+		t.Fatalf("UserCreateParams unexpected rand or empty data: %s, rand: %s", string(uParams), client.GetRand())
+	}
+
+	// 2. ProductCreateParams
+	prodParams, err := client.ProductCreateParams(ctx, "0")
+	if err != nil {
+		t.Fatalf("ProductCreateParams failed: %v", err)
+	}
+	if len(prodParams) == 0 {
+		t.Fatalf("ProductCreateParams empty")
+	}
+
+	// 3. ProjectCreateParams
+	projParams, err := client.ProjectCreateParams(ctx, "0")
+	if err != nil {
+		t.Fatalf("ProjectCreateParams failed: %v", err)
+	}
+	if len(projParams) == 0 {
+		t.Fatalf("ProjectCreateParams empty")
+	}
+
+	// 4. TaskFinishParams
+	tfParams, err := client.TaskFinishParams(ctx, "101")
+	if err != nil {
+		t.Fatalf("TaskFinishParams failed: %v", err)
+	}
+	if len(tfParams) == 0 {
+		t.Fatalf("TaskFinishParams empty")
+	}
+
+	// 5. BugResolveParams
+	brParams, err := client.BugResolveParams(ctx, "201")
+	if err != nil {
+		t.Fatalf("BugResolveParams failed: %v", err)
+	}
+	if len(brParams) == 0 {
+		t.Fatalf("BugResolveParams empty")
+	}
+
+	// 6. TaskDelete
+	if _, err := client.TaskDelete(ctx, "1", "101"); err != nil {
+		t.Fatalf("TaskDelete failed: %v", err)
+	}
+
+	// 7. BugDelete
+	if _, err := client.BugDelete(ctx, "201"); err != nil {
+		t.Fatalf("BugDelete failed: %v", err)
+	}
+
+	// 8. TodoDelete
+	if _, err := client.TodoDelete(ctx, "301"); err != nil {
+		t.Fatalf("TodoDelete failed: %v", err)
+	}
+
+	// 9. DeptList and DeptAdd
+	if _, err := client.DeptList(ctx, nil); err != nil {
+		t.Fatalf("DeptList failed: %v", err)
+	}
+	if _, err := client.DeptAdd(ctx, Params{"parentDeptID": {"0"}}); err != nil {
+		t.Fatalf("DeptAdd failed: %v", err)
+	}
+}
+
+func TestClient_ValidationErrors_And_EdgeCases(t *testing.T) {
+	client := New(Config{URL: "http://localhost"})
+	ctx := context.Background()
+
+	// Task validations
+	if _, err := client.TaskCreateParams(ctx, ""); err == nil {
+		t.Errorf("expected error for empty projectID in TaskCreateParams")
+	}
+	if _, err := client.TaskCreate(ctx, Params{}); err == nil {
+		t.Errorf("expected error for empty project in TaskCreate")
+	}
+	if _, err := client.TaskFinishParams(ctx, ""); err == nil {
+		t.Errorf("expected error for empty taskID in TaskFinishParams")
+	}
+	if _, err := client.TaskFinish(ctx, "", nil); err == nil {
+		t.Errorf("expected error for empty taskID in TaskFinish")
+	}
+	if _, err := client.TaskDelete(ctx, "", ""); err == nil {
+		t.Errorf("expected error for empty taskID in TaskDelete")
+	}
+
+	// Bug validations
+	if _, err := client.BugCreateParams(ctx, "", ""); err == nil {
+		t.Errorf("expected error for empty productID in BugCreateParams")
+	}
+	if _, err := client.BugCreate(ctx, Params{}); err == nil {
+		t.Errorf("expected error for empty product in BugCreate")
+	}
+	if _, err := client.BugResolveParams(ctx, ""); err == nil {
+		t.Errorf("expected error for empty bugID in BugResolveParams")
+	}
+	if _, err := client.BugResolve(ctx, "", nil); err == nil {
+		t.Errorf("expected error for empty bugID in BugResolve")
+	}
+	if _, err := client.BugDelete(ctx, ""); err == nil {
+		t.Errorf("expected error for empty bugID in BugDelete")
+	}
+
+	// Todo validations
+	if _, err := client.TodoCreate(ctx, Params{}); err == nil {
+		t.Errorf("expected error for empty name in TodoCreate")
+	}
+	if _, err := client.TodoStart(ctx, ""); err == nil {
+		t.Errorf("expected error for empty id in TodoStart")
+	}
+	if _, err := client.TodoFinish(ctx, ""); err == nil {
+		t.Errorf("expected error for empty id in TodoFinish")
+	}
+	if _, err := client.TodoClose(ctx, ""); err == nil {
+		t.Errorf("expected error for empty id in TodoClose")
+	}
+	if _, err := client.TodoDelete(ctx, ""); err == nil {
+		t.Errorf("expected error for empty id in TodoDelete")
+	}
+
+	// UserAdd without rand
+	if _, err := client.UserAdd(ctx, Params{}); err == nil {
+		t.Errorf("expected error for UserAdd without rand")
+	}
+}
+
+func TestClient_HTMLErrorAndMessageExtraction(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m := r.URL.Query().Get("m")
+		f := r.URL.Query().Get("f")
+
+		if m == "task" && f == "create" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`<html><head><title>Error</title></head><body><h1>SQLSTATE[42000]: Syntax error or access violation</h1><p>Stack trace:</p></body></html>`))
+			return
+		}
+		if m == "bug" && f == "create" {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"result":"fail","message":"『标题』不能为空。"}`))
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := New(Config{URL: server.URL})
+	ctx := context.Background()
+
+	// 1. HTML error
+	_, err := client.TaskCreate(ctx, Params{"project": {"1"}})
+	if err == nil || !strings.Contains(err.Error(), "SQLSTATE") {
+		t.Fatalf("expected SQLSTATE in error message, got: %v", err)
+	}
+
+	// 2. Fail message
+	_, err = client.BugCreate(ctx, Params{"product": {"1"}})
+	if err == nil || !strings.Contains(err.Error(), "『标题』不能为空") {
+		t.Fatalf("expected fail message in error, got: %v", err)
+	}
+}

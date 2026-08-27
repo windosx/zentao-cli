@@ -63,6 +63,31 @@ func (c *Client) UserList(ctx context.Context, params Params) (json.RawMessage, 
 	return c.call(ctx, http.MethodGet, "company", "browse", merged)
 }
 
+// UserCreateParams returns parameters and schema needed to create a user (m=user&f=create&dept=<dept>).
+func (c *Client) UserCreateParams(ctx context.Context, deptID string) (json.RawMessage, error) {
+	params := Params{}
+	if deptID != "" {
+		params.Set("dept", deptID)
+	}
+	data, err := c.call(ctx, http.MethodGet, "user", "create", params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Try extracting session rand if present in creation metadata
+	var resp struct {
+		Rand json.RawMessage `json:"rand"`
+	}
+	if err := json.Unmarshal(data, &resp); err == nil && len(resp.Rand) > 0 {
+		r := stringValue(resp.Rand)
+		if r != "" && c.rand == "" {
+			c.rand = r
+		}
+	}
+
+	return data, nil
+}
+
 // UserAdd creates a user (POST m=user&f=create&dept=<dept>), including the
 // md5+session-rand password encryption from the PHP SDK addUser():
 //
@@ -132,6 +157,15 @@ func (c *Client) ProductList(ctx context.Context, params Params) (json.RawMessag
 	return c.call(ctx, http.MethodGet, "product", "browse", mergeDefaults(params, defaultsBrowse))
 }
 
+// ProductCreateParams returns parameters and metadata needed to create a product (m=product&f=create&programID=<id>).
+func (c *Client) ProductCreateParams(ctx context.Context, programID string) (json.RawMessage, error) {
+	params := Params{}
+	if programID != "" {
+		params.Set("programID", programID)
+	}
+	return c.call(ctx, http.MethodGet, "product", "create", params)
+}
+
 // ProductAdd creates a product (POST m=product&f=create). Common fields:
 // name, code, PO, QD, RD, acl, status, desc.
 func (c *Client) ProductAdd(ctx context.Context, params Params) (json.RawMessage, error) {
@@ -173,6 +207,15 @@ func (c *Client) ProjectList(ctx context.Context, params Params) (json.RawMessag
 	}
 
 	return data, err
+}
+
+// ProjectCreateParams returns parameters and metadata needed to create a project (m=project&f=create&programID=<id>).
+func (c *Client) ProjectCreateParams(ctx context.Context, programID string) (json.RawMessage, error) {
+	params := Params{}
+	if programID != "" {
+		params.Set("programID", programID)
+	}
+	return c.call(ctx, http.MethodGet, "project", "create", params)
 }
 
 // ProjectAdd creates a project (POST m=project&f=create). Common fields:

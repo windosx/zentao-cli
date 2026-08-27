@@ -60,6 +60,23 @@ var productListCmd = &cobra.Command{
 	},
 }
 
+var productParamsCmd = &cobra.Command{
+	Use:   "params",
+	Short: "获取创建产品所需的元数据字典（产品线、PO/QD/RD 负责人、用户组等）",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.ProductCreateParams(ctx, productProgramID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 var productAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "创建新产品",
@@ -110,6 +127,8 @@ func init() {
 	productListCmd.Flags().StringVar(&productProgramID, "program", "0", "按所属项目集/项目 ID 过滤 (0 代表全量/无项目集)")
 	productListCmd.Flags().StringVar(&productOrderBy, "order-by", "order_desc", "排序字段 (例如: order_desc, order_asc, id_desc, id_asc, name_asc)")
 
+	productParamsCmd.Flags().StringVar(&productProgramID, "program", "0", "按所属项目集/项目 ID 过滤 (0 代表全量/无项目集)")
+
 	productAddCmd.Flags().StringVar(&productName, "name", "", "产品名称 (必填)")
 	productAddCmd.Flags().StringVar(&productCode, "code", "", "产品代号 / 英文缩写 (必填)")
 	productAddCmd.Flags().StringVar(&productPO, "po", "", "产品负责人 (PO) 账号")
@@ -119,5 +138,6 @@ func init() {
 	productAddCmd.Flags().StringVar(&productDesc, "desc", "", "产品描述说明")
 
 	productCmd.AddCommand(productListCmd)
+	productCmd.AddCommand(productParamsCmd)
 	productCmd.AddCommand(productAddCmd)
 }

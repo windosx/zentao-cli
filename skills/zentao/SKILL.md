@@ -29,21 +29,33 @@ metadata:
 | **开始待办事项** | `zentao todo start --id <id> -o json` | `--id` (必填) | write |
 | **完成待办事项** | `zentao todo finish --id <id> -o json` | `--id` (必填) | write |
 | **关闭待办事项** | `zentao todo close --id <id> -o json` | `--id` (必填) | write |
+| **删除待办事项** | `zentao todo delete --id <id> -o json` | `--id` (必填) | destructive |
 | **查看我的需求/故事** | `zentao my story -o json` | `--type assignedTo` (默认) | read |
 | **查看我参与的项目** | `zentao my project -o json` | `--status doing\|all` | read |
 | **查看我的活动流动态** | `zentao my dynamic -o text` | `--type today\|thisWeek` | read |
 | **查看项目任务列表** | `zentao task list --project <id> -o json` | `--project` (必填), `--status` | read |
 | **获取创建任务元数据** | `zentao task params --project <id> -o json` | `--project` (必填) | read |
 | **创建新任务** | `zentao task create --project <id> --name <name> -o json` | `--project`, `--name`, `--assigned-to`, `--estimate` | write |
+| **获取完成任务元数据** | `zentao task finish-params --id <id> -o json` | `--id` (必填) | read |
 | **完成任务** | `zentao task finish --id <id> --real <hours> -o json` | `--id`, `--real`, `--comment` | write |
+| **删除任务** | `zentao task delete --id <id> --project <id> -o json` | `--id` (必填) | destructive |
 | **查看产品Bug列表** | `zentao bug list --product <id> -o json` | `--product` (必填), `--browse-type` | read |
 | **获取创建Bug元数据** | `zentao bug params --product <id> -o json` | `--product` (必填) | read |
 | **提交Bug** | `zentao bug create --product <id> --title <title> -o json` | `--product`, `--title`, `--severity`, `--assigned-to`, `--steps` | write |
+| **获取解决Bug元数据** | `zentao bug resolve-params --id <id> -o json` | `--id` (必填) | read |
 | **解决Bug** | `zentao bug resolve --id <id> --resolution fixed -o json` | `--id`, `--resolution`, `--comment` | write |
+| **删除Bug** | `zentao bug delete --id <id> -o json` | `--id` (必填) | destructive |
 | **查看产品列表** | `zentao product list -o json` | `--status noclosed\|all` | read |
+| **获取创建产品元数据** | `zentao product params --program <id> -o json` | `--program` | read |
+| **创建产品** | `zentao product add --name <name> --code <code> -o json` | `--name`, `--code`, `--po`, `--qd`, `--rd` | write |
 | **查看项目列表** | `zentao project list -o json` | `--status doing\|all` | read |
+| **获取创建项目元数据** | `zentao project params --program <id> -o json` | `--program` | read |
+| **创建项目** | `zentao project add --name <name> --code <code> -o json` | `--name`, `--code`, `--begin`, `--end` | write |
 | **查看公司成员列表** | `zentao user list -o json` | `--dept <id>` | read |
+| **获取创建用户元数据** | `zentao user params --dept <id> -o json` | `--dept` | read |
+| **创建用户** | `zentao user add --username <acc> --user-password <pwd> --realname <name> -o json` | `--username`, `--user-password`, `--realname` | write |
 | **查看部门层级树** | `zentao dept list -o json` | `--parent <id>` | read |
+| **添加部门** | `zentao dept add --parent <id> --name <name> -o json` | `--parent`, `--name` | write |
 | **运行时探测工具Schema**| `zentao schema [subcommand] --compact -o json`| 探索工具参数定义与类型 | read |
 | **检查登录状态** | `zentao auth status -o json` | 检查会话有效性 | read |
 | **登录与凭证持久化** | `zentao auth login --url <url> --account <acc> --password <pwd>` | 登录并建立持久会话 | write |

@@ -67,9 +67,16 @@
 
 ## 📦 安装指南
 
-> **提示**：本项目名为 **`zentao-cli`**，可执行制品名统一为 **`zentao`**（brew/winget/choco/deb 安装后直接使用 `zentao` 命令；`go install` 因 Go 工具链按模块名命名，安装为 `zentao-cli`，可加一条 alias）。
+> **提示**：本项目名为 **`zentao-cli`**，可执行制品名统一为 **`zentao`**（一键脚本/brew/winget/choco 安装后直接使用 `zentao` 命令；`go install` 因 Go 工具链按模块名命名，安装为 `zentao-cli`，可加一条 alias）。
 
-### 1. macOS / Linux (Homebrew)
+### 1. 一键脚本安装（Linux & macOS 推荐，自动识别架构）
+```bash
+curl -fsSL https://raw.githubusercontent.com/windosx/zentao-cli/main/install.sh | bash
+
+# 安装后直接使用：zentao
+```
+
+### 2. macOS / Linux (Homebrew)
 ```bash
 # 安装（tap 仓库 homebrew-tap 自动映射为短名 windosx/tap）
 brew install windosx/tap/zentao-cli
@@ -77,7 +84,7 @@ brew install windosx/tap/zentao-cli
 # 安装后直接使用：zentao
 ```
 
-### 2. Windows (WinGet / Chocolatey)
+### 3. Windows (WinGet / Chocolatey)
 ```powershell
 # 方式 A：WinGet (Windows 10/11 官方推荐)
 winget install windosx.zentao-cli
@@ -85,13 +92,6 @@ winget install windosx.zentao-cli
 # 方式 B：Chocolatey
 choco install zentao-cli
 
-# 安装后直接使用：zentao
-```
-
-### 3. Linux (Debian / Ubuntu / APT)
-```bash
-# 下载对应架构的 deb 安装包并使用 apt 安装 (amd64 / arm64)
-sudo apt-get install ./zentao-cli_*_linux_amd64.deb
 # 安装后直接使用：zentao
 ```
 
@@ -104,7 +104,7 @@ go install github.com/windosx/zentao-cli@latest
 # 在 ~/.zshrc 或 ~/.bashrc 中加入：
 alias zentao=zentao-cli
 ```
-> `go install` 构建的版本信息会从模块元数据自动读取（如 `v1.0.5`），与 GitHub Releases 中 goreleaser 注入的版本保持一致。
+> `go install` 构建的版本信息会从模块元数据自动读取（如 `v1.0.8`），与 GitHub Releases 中 goreleaser 注入的版本保持一致。
 
 ### 5. 下载预编译二进制 (GitHub Releases)
 前往 [GitHub Releases](https://github.com/windosx/zentao-cli/releases) 下载适用于你操作系统的 tar.gz / zip 压缩包，解压后将 `zentao` 移动至系统 `PATH` 目录即可。
@@ -187,6 +187,7 @@ zentao todo create --name "梳理架构设计" --date "2026-08-27" --pri 2
 zentao todo start --id 3                                     # 标记开始 (doing)
 zentao todo finish --id 3                                    # 标记完成 (done)
 zentao todo close --id 3                                     # 标记关闭 (closed)
+zentao todo delete --id 3                                    # 删除待办事项
 
 # 我的需求与项目
 zentao my story --type assignedTo -o table                   # 指派给我的需求
@@ -196,12 +197,18 @@ zentao my dynamic --type today -o text                       # 今天的操作�
 
 ---
 
-### 2. 项目与任务管理 (`project` / `task`)
+### 2. 项目、产品与任务管理 (`project` / `product` / `task`)
 
 ```bash
+# 产品管理
+zentao product list --status noclosed -o table               # 查询正常运营中的产品
+zentao product params --program 0                            # 获取创建产品所需的元数据字典
+zentao product add --name "移动应用" --code "app" --po "po_user"
+
 # 项目管理
 zentao project list --status doing -o table                  # 查询进行中的项目
 zentao project list --status all -o table                    # 查询全部项目
+zentao project params --program 0                            # 获取创建项目所需的元数据字典
 zentao project add --name "Sprint 2" --code "s2" --begin "2026-09-01" --end "2026-09-15"
 
 # 任务管理
@@ -209,7 +216,9 @@ zentao task list --project 109 --status doing -o table       # 查询执行 109 
 zentao task list --project 109 --status all -o table         # 查询全部任务
 zentao task params --project 109                             # 获取创建任务所需的模块与指派人元数据
 zentao task create --project 109 --name "实现登录API" --assigned-to "testuser" --estimate 4.0
+zentao task finish-params --id 657                           # 获取完成任务所需的当前状态与表单元数据
 zentao task finish --id 657 --real 2.0 --comment "已完成单元测试覆盖"
+zentao task delete --id 657 --project 109                    # 删除指定任务
 ```
 
 ---
@@ -222,7 +231,9 @@ zentao bug list --product 8 --browse-type unclosed -o table  # 未关闭的缺�
 zentao bug list --product 8 --browse-type assigntome -o table # 指派给我的缺陷
 zentao bug params --product 8                                # 获取提交 Bug 的版本与元数据
 zentao bug create --product 8 --title "登录页崩溃" --severity 2 --assigned-to "testuser"
+zentao bug resolve-params --id 2862                          # 获取解决 Bug 的方案与构建版本元数据
 zentao bug resolve --id 2862 --resolution fixed --comment "已修复并在本地验证"
+zentao bug delete --id 2862                                  # 删除指定 Bug
 ```
 
 ---
@@ -231,7 +242,10 @@ zentao bug resolve --id 2862 --resolution fixed --comment "已修复并在本地
 
 ```bash
 zentao user list -o table                                    # 查询公司成员列表
+zentao user params --dept 1                                  # 获取创建用户所需的部门树与角色元数据
+zentao user add --username "tom" --user-password "pwd" --realname "Tom"
 zentao dept list -o table                                    # 查询部门层级结构
+zentao dept add --parent 1 --name "前端组"                   # 添加子部门
 ```
 
 ---

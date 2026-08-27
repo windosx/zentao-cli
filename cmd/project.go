@@ -66,6 +66,23 @@ var projectListCmd = &cobra.Command{
 	},
 }
 
+var projectParamsCmd = &cobra.Command{
+	Use:   "params",
+	Short: "获取创建项目所需的元数据字典（项目集、可用产品列表等）",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.ProjectCreateParams(ctx, projectProgramID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 var projectAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "创建新项目",
@@ -137,6 +154,8 @@ func init() {
 	projectListCmd.Flags().StringVar(&projectProgramID, "program", "0", "按项目集 ID 过滤 (0 为全部)")
 	projectListCmd.Flags().StringVar(&projectOrderBy, "order-by", "order_desc", "排序字段 (例如: order_desc, order_asc, id_desc, id_asc, begin_desc, end_desc)")
 
+	projectParamsCmd.Flags().StringVar(&projectProgramID, "program", "0", "按项目集 ID 过滤 (0 为全部)")
+
 	projectAddCmd.Flags().StringVar(&projectName, "name", "", "项目名称 (必填)")
 	projectAddCmd.Flags().StringVar(&projectCode, "code", "", "项目代号 / 英文缩写 (必填)")
 	projectAddCmd.Flags().StringVar(&projectBegin, "begin", "", "计划开始日期 (格式: YYYY-MM-DD)")
@@ -153,5 +172,6 @@ func init() {
 	projectAddCmd.Flags().StringVar(&projectProductID, "product", "", "关联所属产品 ID")
 
 	projectCmd.AddCommand(projectListCmd)
+	projectCmd.AddCommand(projectParamsCmd)
 	projectCmd.AddCommand(projectAddCmd)
 }

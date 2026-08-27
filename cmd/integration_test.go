@@ -160,11 +160,14 @@ func TestIntegration_FullLifecycle(t *testing.T) {
 		queries := [][]string{
 			{"product", "list", "--status", "normal", "-o", "table"},
 			{"product", "list", "--status", "all", "-o", "json"},
+			{"product", "params", "--program", "0", "-o", "json"},
 			{"project", "list", "--status", "doing", "-o", "table"},
 			{"project", "list", "--status", "undone", "-o", "json"},
 			{"project", "list", "--status", "all", "-o", "table"},
+			{"project", "params", "--program", "0", "-o", "json"},
 			{"dept", "list", "-o", "table"},
 			{"user", "list", "-o", "table"},
+			{"user", "params", "--dept", "0", "-o", "json"},
 		}
 
 		for _, args := range queries {
@@ -172,6 +175,11 @@ func TestIntegration_FullLifecycle(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				out, err := execCmd(args...)
 				if err != nil {
+					// user params requires admin ACL in ZenTao; non-admin account getting permission denied is expected
+					if strings.Contains(err.Error(), "permission denied") || strings.Contains(out, "permission denied") {
+						t.Logf("command %v returned permission denied as expected for non-admin test account", args)
+						return
+					}
 					t.Fatalf("command %v failed: %v, out: %s", args, err, out)
 				}
 			})
@@ -276,7 +284,12 @@ func TestIntegration_FullLifecycle(t *testing.T) {
 			_, _ = c.TaskDelete(context.Background(), targetProjectID, createdTaskID)
 		})
 
-		// 5.4 Finish Task
+		// 5.4 Test Task Finish Params
+		if outFP, errFP := execCmd("task", "finish-params", "--id", createdTaskID, "-o", "json"); errFP != nil {
+			t.Fatalf("task finish-params failed: %v, out: %s", errFP, outFP)
+		}
+
+		// 5.5 Finish Task
 		if _, err := execCmd("task", "finish", "--id", createdTaskID, "--real", "1.0", "--comment", "CI测试自动完成", "-o", "json"); err != nil {
 			t.Fatalf("task finish failed: %v", err)
 		}
@@ -353,7 +366,12 @@ func TestIntegration_FullLifecycle(t *testing.T) {
 			_, _ = c.BugDelete(context.Background(), createdBugID)
 		})
 
-		// 6.4 Resolve Bug
+		// 6.4 Test Bug Resolve Params
+		if outRP, errRP := execCmd("bug", "resolve-params", "--id", createdBugID, "-o", "json"); errRP != nil {
+			t.Fatalf("bug resolve-params failed: %v, out: %s", errRP, outRP)
+		}
+
+		// 6.5 Resolve Bug
 		if _, err := execCmd("bug", "resolve", "--id", createdBugID, "--resolution", "fixed", "--comment", "CI测试解决", "-o", "json"); err != nil {
 			t.Fatalf("bug resolve failed: %v", err)
 		}

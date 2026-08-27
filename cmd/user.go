@@ -57,6 +57,23 @@ var userListCmd = &cobra.Command{
 	},
 }
 
+var userParamsCmd = &cobra.Command{
+	Use:   "params",
+	Short: "获取创建用户所需的元数据字典（部门、用户组、角色等）",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.UserCreateParams(ctx, userDeptID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 var userAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "创建新用户账号",
@@ -121,6 +138,8 @@ func init() {
 	userListCmd.Flags().StringVar(&userType, "type", "bydept", "列表类型: bydept (按部门), all (全量)")
 	userListCmd.Flags().StringVar(&userOrderBy, "order-by", "id", "排序字段 (例如 id, account_asc)")
 
+	userParamsCmd.Flags().StringVar(&userDeptID, "dept", "0", "部门 ID (0 代表全部部门)")
+
 	userAddCmd.Flags().StringVar(&userDeptID, "dept", "0", "所属部门 ID")
 	userAddCmd.Flags().StringVar(&newUsername, "username", "", "新用户的登录用户名 / 账号 (必填)")
 	userAddCmd.Flags().StringVar(&newUserPassword, "user-password", "", "新用户的初始密码 (必填)")
@@ -133,5 +152,6 @@ func init() {
 	userAddCmd.Flags().StringVar(&userQQ, "qq", "", "QQ 号码")
 
 	userCmd.AddCommand(userListCmd)
+	userCmd.AddCommand(userParamsCmd)
 	userCmd.AddCommand(userAddCmd)
 }

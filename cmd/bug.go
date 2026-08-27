@@ -155,6 +155,27 @@ var bugCreateCmd = &cobra.Command{
 	},
 }
 
+var bugResolveParamsCmd = &cobra.Command{
+	Use:   "resolve-params",
+	Short: "获取解决 Bug 所需的元数据字典（解决方案列表、构建版本、当前 Bug 详情等）",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.BugResolveParams(ctx, bugID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 var bugResolveCmd = &cobra.Command{
 	Use:   "resolve",
 	Short: "解决 Bug",
@@ -195,6 +216,27 @@ var bugResolveCmd = &cobra.Command{
 	},
 }
 
+var bugDeleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "删除指定 Bug",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.BugDelete(ctx, bugID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 func init() {
 	bugListCmd.Flags().StringVar(&bugProductID, "product", "", "所属产品 ID (必填)")
 	bugListCmd.Flags().StringVar(&bugBranch, "branch", "all", "分支 ID (all 为全部/主干)")
@@ -222,8 +264,14 @@ func init() {
 	bugResolveCmd.Flags().StringVar(&bugResolvedDate, "resolved-date", "", "解决日期 (格式: YYYY-MM-DD)")
 	bugResolveCmd.Flags().StringVar(&bugComment, "comment", "", "解决方案备注说明")
 
+	bugResolveParamsCmd.Flags().StringVar(&bugID, "id", "", "要解决的 Bug ID (必填)")
+
+	bugDeleteCmd.Flags().StringVar(&bugID, "id", "", "要删除的 Bug ID (必填)")
+
 	bugCmd.AddCommand(bugListCmd)
 	bugCmd.AddCommand(bugParamsCmd)
 	bugCmd.AddCommand(bugCreateCmd)
+	bugCmd.AddCommand(bugResolveParamsCmd)
 	bugCmd.AddCommand(bugResolveCmd)
+	bugCmd.AddCommand(bugDeleteCmd)
 }
