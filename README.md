@@ -25,15 +25,38 @@
 
 ---
 
-## 💡 为什么需要 zentao-cli？
+## 💡 为什么创建这个项目？（背景与选型指南）
 
-在 AI 编码助手（如 Claude Code, ZCode, Cursor, OpenHands 等）与企业项目管理系统（ZenTao PMS）深度结合的日常开发场景中，传统的交互方式面临诸多痛点：
+### 项目背景与核心痛点
 
-- ❌ **Web 会话频繁超时**：禅道基于 PHP 原生 Session（默认 24 分钟不活跃即回收），导致自动化脚本与 Agent 任务频繁被 `登录已超时，请重新登入!` 中断。
-- ❌ **旧版 SDK 能力缺失且年久失修**：官方早期 PHP SDK 仅提供 20 余个简易 CRUD 接口，缺失**个人工作台、待办看板、活动流、多维过滤**等高频生产力能力。
-- ❌ **非标准响应干扰大模型**：禅道原生错误多为 HTML 堆栈源码或双重转义字符串，直接破坏 LLM Function Calling 的结构化解析。
+在 AI 编码助手（如 Claude Code, ZCode, Cursor, OpenHands 等）与企业项目管理系统（ZenTao PMS）深度集成的日常开发与自动化运维中，开发者与 Agent 经常面临以下实际挑战：
 
-`zentao-cli`（可执行制品名为 `zentao`）基于禅道官方最新规范与底层接口彻底重构，不仅提供符合人体工程学的 CLI，更是一套成熟稳定的 **Go 语言原生 ZenTao SDK (`pkg/zentao`)**。
+1. **历史与存量版本无 RESTful API 2.0 支持**：
+   禅道官方自 **ZenTao 21.7.6**（2025 年 10 月）及 **22.x** 起才开始引入 RESTful API v2 (`/api.php/v2`)。国内大量企业和团队的生产私有化部署仍停留在 **ZenTao ≤ 21.7.5（包括 21.7.0, 21.6, 20.x, 19.x, 18.x...）**，这些版本完全不存在 API v2 模块。
+2. **Web 会话频繁超时中断 AI 工作流**：
+   禅道基于 PHP 原生 Session（默认 24 分钟无操作即回收），导致长时间运行的 Agent 任务频繁被 `登录已超时，请重新登入!` 中断并失败。
+3. **个人工作台与待办日历能力缺失**：
+   API v2 主要是对核心实体（产品/项目/Bug/任务）的基础 CRUD 门面路由，缺失了**个人工作台（`my/*` 指派给我的/我创建的/今日看板）**、**日程待办看板（`todo/*`）**、**操作动态流水（`dynamic`）**等开发者与 Agent 每天高频使用的生产力端点。
+4. **单二进制与安全钥匙串需求**：
+   现代开发与 CI/CD 流程渴望零运行环境依赖（无需 Node.js / Bun / npm 运行时）的单一跨平台可执行文件，以及系统原生钥匙串（macOS Keychain / Windows Credential Manager / Linux Secret Service）级别的凭据存储安全。
+
+`zentao-cli`（制品名为 `zentao`）直接对齐禅道底层核心控制器（Native Web Controller JSON 通道）与官方 PHP SDK，提供全生命周期的 Go SDK (`pkg/zentao`) 与全平台 CLI。
+
+---
+
+### 选型建议：我应该用哪个 CLI？
+
+- 🌟 **建议使用官方 [easysoft/zentao-cli](https://github.com/easysoft/zentao-cli) 的场景**：
+  - 你的团队正在运行 **最新版 ZenTao ≥ 21.7.6 / 22.x**，且服务端已开启并配置好 RESTful API v2 模块；
+  - 本地已具备 Node.js / Bun 运行时，主要通过 `npx` 或 npm 生态进行交互；
+  - 仅需要标准实体（产品、项目、需求、Bug、任务）的基础 CRUD 管理。
+
+- ⚡ **推荐使用本项目 [windosx/zentao-cli](https://github.com/windosx/zentao-cli) 的场景**：
+  - 你的团队运行在 **ZenTao ≤ 21.7.5（如 18.x, 20.x, 21.0~21.7 等广泛存量部署）** 或未开放 API v2 的私有化实例上；
+  - 面向 **AI Agent（Claude Code, Cursor, ZCode 等）长时间自主运行**，需要**零凭据泄漏与会话超时无感自动重登续约（Zero-Auth）**；
+  - 深度依赖**个人工作台看板（`my` 指派给我/我创建的）**、**今日待办日历（`todo`）**与**操作活动流（`dynamic`）**；
+  - 追求**单静态二进制开箱即用**（支持 Homebrew Cask, WinGet, Chocolatey 一键安装），无需 Node.js/Bun 运行时；
+  - 需要在 Go 后端微服务或自动化插件中直接引用纯 Go SDK (`pkg/zentao`)。
 
 ---
 
@@ -326,8 +349,8 @@ zentao auth logout                                           # 注销并清除�
 
 #### 官方 API 通道评估结论
 
-- **为什么不走官方 RESTful API v1 (`/api.php/v1`)**：经源码级深度审查，API v1 为能力子集，缺少 `my/*`（个人工作台任务/Bug/待办看板）与 `dynamic`（活动流水）等核心生产力端点；且创建/编辑任务等操作无法透传 `keywords` 等表单字段。
-- **关于 API v2 (`/api.php/v2`)**：禅道自 21.7.8+ / 22.x 起引入的 v2 本质上是底层 Web 控制器方法的 RESTful 门面路由。因主流部署（如 21.7.0）未包含 v2，且 v2 的 Token 同样基于 86400 秒生命周期的服务端 Session，本项目统一采用官方 PHP SDK 所使用的原生 Web 控制器 JSON 通道，保证最大范围的向前兼容与全量功能覆盖。
+- **关于官方 RESTful API v1 (`/api.php/v1`)**：早期接口，为功能极简子集且已被官方废弃，缺少 `my/*`（个人工作台任务/Bug/待办看板）与 `dynamic`（活动流水）等核心生产力端点；且创建/编辑任务等操作无法透传 `keywords` 等表单字段。
+- **关于官方 RESTful API v2 (`/api.php/v2`)**：禅道官方自 **21.7.6+**（2025 年 10 月）及 **22.x** 起引入，本质上是底层 Web 控制器方法的 RESTful 门面路由。由于早期存量版本（≤ 21.7.5）完全未包含 v2 模块，且 v2 的 Token 同样受服务端 Session 生命周期限制，本项目统一采用官方 PHP SDK 所使用的原生 Web 控制器 JSON 通道，保证最大范围的跨版本全兼容与全量工作台功能覆盖。
 
 ```bash
 zentao version -o table
