@@ -11,7 +11,7 @@ import (
 var bugCmd = &cobra.Command{
 	Use:   "bug",
 	Short: "管理禅道缺陷 (Bug)",
-	Long:  "查询产品 Bug 列表、获取创建 Bug 元数据、提交新 Bug 或解决 Bug，支持多维度过滤（未关闭、指派给我、我创建的、待确认、久未解决、已过期等）。",
+	Long:  "查询产品 Bug 列表、查看 Bug 详情、获取元数据、提交新 Bug、编辑或执行生命周期操作（解决、关闭、激活、确认、指派、删除）。",
 }
 
 var (
@@ -30,6 +30,15 @@ var (
 	bugProjectID     string
 	bugStoryID       string
 	bugModuleID      string
+	bugKeywords      string
+	bugMailto        string
+	bugOS            string
+	bugBrowser       string
+	bugHardware      string
+	bugFound         string
+	bugDeadline      string
+	bugDuplicateBug  string
+	bugStatus        string
 	bugResolution    string
 	bugResolvedBuild string
 	bugResolvedDate  string
@@ -64,6 +73,27 @@ var bugListCmd = &cobra.Command{
 		}
 
 		data, err := client.BugList(ctx, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugViewCmd = &cobra.Command{
+	Use:   "view",
+	Short: "查看指定 Bug 的详细信息",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.BugView(ctx, bugID)
 		if err != nil {
 			return err
 		}
@@ -149,8 +179,111 @@ var bugCreateCmd = &cobra.Command{
 		if bugModuleID != "" {
 			params.Set("module", bugModuleID)
 		}
+		if bugKeywords != "" {
+			params.Set("keywords", bugKeywords)
+		}
+		if bugMailto != "" {
+			params.Set("mailto", bugMailto)
+		}
+		if bugOS != "" {
+			params.Set("os", bugOS)
+		}
+		if bugBrowser != "" {
+			params.Set("browser", bugBrowser)
+		}
+		if bugHardware != "" {
+			params.Set("hardware", bugHardware)
+		}
+		if bugFound != "" {
+			params.Set("found", bugFound)
+		}
+		if bugDeadline != "" {
+			params.Set("deadline", bugDeadline)
+		}
 
 		data, err := client.BugCreate(ctx, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugEditCmd = &cobra.Command{
+	Use:   "edit",
+	Short: "修改指定 Bug 的信息",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		params := zentao.Params{}
+		if bugTitle != "" {
+			params.Set("title", bugTitle)
+		}
+		if bugSeverity != "" {
+			params.Set("severity", bugSeverity)
+		}
+		if bugPri != "" {
+			params.Set("pri", bugPri)
+		}
+		if bugType != "" {
+			params.Set("type", bugType)
+		}
+		if bugAssignedTo != "" {
+			params.Set("assignedTo", bugAssignedTo)
+		}
+		if bugSteps != "" {
+			params.Set("steps", bugSteps)
+		}
+		if bugOpenedBuild != "" {
+			params.Set("openedBuild", bugOpenedBuild)
+			params["openedBuild[]"] = []string{bugOpenedBuild}
+			params["openedBuild[0]"] = []string{bugOpenedBuild}
+		}
+		if bugProjectID != "" {
+			params.Set("project", bugProjectID)
+		}
+		if bugStoryID != "" {
+			params.Set("story", bugStoryID)
+		}
+		if bugModuleID != "" {
+			params.Set("module", bugModuleID)
+		}
+		if bugKeywords != "" {
+			params.Set("keywords", bugKeywords)
+		}
+		if bugMailto != "" {
+			params.Set("mailto", bugMailto)
+		}
+		if bugOS != "" {
+			params.Set("os", bugOS)
+		}
+		if bugBrowser != "" {
+			params.Set("browser", bugBrowser)
+		}
+		if bugHardware != "" {
+			params.Set("hardware", bugHardware)
+		}
+		if bugFound != "" {
+			params.Set("found", bugFound)
+		}
+		if bugDeadline != "" {
+			params.Set("deadline", bugDeadline)
+		}
+		if bugStatus != "" {
+			params.Set("status", bugStatus)
+		}
+		if bugComment != "" {
+			params.Set("comment", bugComment)
+		}
+
+		data, err := client.BugEdit(ctx, bugID, params)
 		if err != nil {
 			return err
 		}
@@ -204,14 +337,141 @@ var bugResolveCmd = &cobra.Command{
 			"resolution":    {bugResolution},
 			"resolvedBuild": {build},
 		}
+		if bugDuplicateBug != "" {
+			params.Set("duplicateBug", bugDuplicateBug)
+		}
 		if bugResolvedDate != "" {
 			params.Set("resolvedDate", bugResolvedDate)
+		}
+		if bugAssignedTo != "" {
+			params.Set("assignedTo", bugAssignedTo)
 		}
 		if bugComment != "" {
 			params.Set("comment", bugComment)
 		}
 
 		data, err := client.BugResolve(ctx, bugID, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugCloseCmd = &cobra.Command{
+	Use:   "close",
+	Short: "关闭已解决或无需处理的 Bug",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		params := zentao.Params{}
+		if bugComment != "" {
+			params.Set("comment", bugComment)
+		}
+
+		data, err := client.BugClose(ctx, bugID, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugActivateCmd = &cobra.Command{
+	Use:   "activate",
+	Short: "激活已解决或已关闭的 Bug (重新打开)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		params := zentao.Params{}
+		if bugOpenedBuild != "" {
+			params.Set("openedBuild", bugOpenedBuild)
+		}
+		if bugAssignedTo != "" {
+			params.Set("assignedTo", bugAssignedTo)
+		}
+		if bugComment != "" {
+			params.Set("comment", bugComment)
+		}
+
+		data, err := client.BugActivate(ctx, bugID, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugAssignCmd = &cobra.Command{
+	Use:   "assign",
+	Short: "指派 Bug 给指定用户",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+		if bugAssignedTo == "" {
+			return fmt.Errorf("--assigned-to 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		params := zentao.Params{
+			"assignedTo": {bugAssignedTo},
+		}
+		if bugComment != "" {
+			params.Set("comment", bugComment)
+		}
+
+		data, err := client.BugAssign(ctx, bugID, params)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugConfirmCmd = &cobra.Command{
+	Use:   "confirm",
+	Short: "确认 Bug",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := context.Background()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		params := zentao.Params{}
+		if bugPri != "" {
+			params.Set("pri", bugPri)
+		}
+		if bugAssignedTo != "" {
+			params.Set("assignedTo", bugAssignedTo)
+		}
+		if bugComment != "" {
+			params.Set("comment", bugComment)
+		}
+
+		data, err := client.BugConfirm(ctx, bugID, params)
 		if err != nil {
 			return err
 		}
@@ -247,6 +507,8 @@ func init() {
 	bugListCmd.Flags().StringVar(&bugOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, id_asc, pri_asc, severity_desc, openedDate_desc)")
 	addPaginationFlags(bugListCmd)
 
+	bugViewCmd.Flags().StringVar(&bugID, "id", "", "要查看的 Bug ID (必填)")
+
 	bugParamsCmd.Flags().StringVar(&bugProductID, "product", "", "所属产品 ID (必填)")
 	bugParamsCmd.Flags().StringVar(&bugBranch, "branch", "all", "分支 ID (all 为全部/主干)")
 
@@ -261,21 +523,74 @@ func init() {
 	bugCreateCmd.Flags().StringVar(&bugProjectID, "project", "0", "关联所属项目 / 执行 ID")
 	bugCreateCmd.Flags().StringVar(&bugStoryID, "story", "0", "关联所属需求/故事 ID")
 	bugCreateCmd.Flags().StringVar(&bugModuleID, "module", "0", "所属模块 ID")
+	bugCreateCmd.Flags().StringVar(&bugKeywords, "keywords", "", "Bug 关键词 (例如: 崩溃, 权限)")
+	bugCreateCmd.Flags().StringVar(&bugMailto, "mailto", "", "抄送列表 (逗号分隔的账号)")
+	bugCreateCmd.Flags().StringVar(&bugOS, "os", "", "操作系统 (windows, mac, linux, android, ios, all等)")
+	bugCreateCmd.Flags().StringVar(&bugBrowser, "browser", "", "浏览器 (chrome, firefox, safari, edge, all等)")
+	bugCreateCmd.Flags().StringVar(&bugHardware, "hardware", "", "硬件平台")
+	bugCreateCmd.Flags().StringVar(&bugFound, "found", "", "发现于版本")
+	bugCreateCmd.Flags().StringVar(&bugDeadline, "deadline", "", "截止解决日期 (格式: YYYY-MM-DD)")
+
+	bugEditCmd.Flags().StringVar(&bugID, "id", "", "要修改的 Bug ID (必填)")
+	bugEditCmd.Flags().StringVar(&bugTitle, "title", "", "Bug 标题")
+	bugEditCmd.Flags().StringVar(&bugSeverity, "severity", "", "严重程度 (1=致命, 2=严重, 3=一般, 4=轻微)")
+	bugEditCmd.Flags().StringVar(&bugPri, "pri", "", "优先级 (1=最高, 2=高, 3=中, 4=低)")
+	bugEditCmd.Flags().StringVar(&bugType, "type", "", "Bug 类型")
+	bugEditCmd.Flags().StringVar(&bugOpenedBuild, "opened-build", "", "影响版本")
+	bugEditCmd.Flags().StringVar(&bugAssignedTo, "assigned-to", "", "指派给的用户账号")
+	bugEditCmd.Flags().StringVar(&bugSteps, "steps", "", "重现步骤")
+	bugEditCmd.Flags().StringVar(&bugProjectID, "project", "", "关联项目 ID")
+	bugEditCmd.Flags().StringVar(&bugStoryID, "story", "", "关联需求 ID")
+	bugEditCmd.Flags().StringVar(&bugModuleID, "module", "", "所属模块 ID")
+	bugEditCmd.Flags().StringVar(&bugKeywords, "keywords", "", "关键词")
+	bugEditCmd.Flags().StringVar(&bugMailto, "mailto", "", "抄送列表")
+	bugEditCmd.Flags().StringVar(&bugOS, "os", "", "操作系统")
+	bugEditCmd.Flags().StringVar(&bugBrowser, "browser", "", "浏览器")
+	bugEditCmd.Flags().StringVar(&bugHardware, "hardware", "", "硬件平台")
+	bugEditCmd.Flags().StringVar(&bugFound, "found", "", "发现于版本")
+	bugEditCmd.Flags().StringVar(&bugDeadline, "deadline", "", "截止日期")
+	bugEditCmd.Flags().StringVar(&bugStatus, "status", "", "Bug 状态")
+	bugEditCmd.Flags().StringVar(&bugComment, "comment", "", "修改备注说明")
 
 	bugResolveCmd.Flags().StringVar(&bugID, "id", "", "要解决的 Bug ID (必填)")
 	bugResolveCmd.Flags().StringVar(&bugResolution, "resolution", "fixed", "解决方案 (fixed: 已解决, bydesign: 设计如此, duplicate: 重复Bug, external: 外部原因, notrepro: 无法重现, postponed: 延期处理, willnotfix: 不予解决, tostory: 转为需求)")
 	bugResolveCmd.Flags().StringVar(&bugResolvedBuild, "resolved-build", "trunk", "解决该 Bug 的构建版本号 (例如: trunk, 1.0.1)")
+	bugResolveCmd.Flags().StringVar(&bugDuplicateBug, "duplicate-bug", "", "重复的 Bug ID (当 resolution 为 duplicate 时提供)")
 	bugResolveCmd.Flags().StringVar(&bugResolvedDate, "resolved-date", "", "解决日期 (格式: YYYY-MM-DD)")
+	bugResolveCmd.Flags().StringVar(&bugAssignedTo, "assigned-to", "", "解决后指派给 (默认给 Bug 创建者进行关闭/确认)")
 	bugResolveCmd.Flags().StringVar(&bugComment, "comment", "", "解决方案备注说明")
 
 	bugResolveParamsCmd.Flags().StringVar(&bugID, "id", "", "要解决的 Bug ID (必填)")
 
+	bugCloseCmd.Flags().StringVar(&bugID, "id", "", "要关闭的 Bug ID (必填)")
+	bugCloseCmd.Flags().StringVar(&bugComment, "comment", "", "关闭备注说明")
+
+	bugActivateCmd.Flags().StringVar(&bugID, "id", "", "要激活的 Bug ID (必填)")
+	bugActivateCmd.Flags().StringVar(&bugOpenedBuild, "opened-build", "trunk", "重新激活影响的构建版本")
+	bugActivateCmd.Flags().StringVar(&bugAssignedTo, "assigned-to", "", "指派给的用户账号")
+	bugActivateCmd.Flags().StringVar(&bugComment, "comment", "", "激活备注说明")
+
+	bugAssignCmd.Flags().StringVar(&bugID, "id", "", "要指派的 Bug ID (必填)")
+	bugAssignCmd.Flags().StringVar(&bugAssignedTo, "assigned-to", "", "指派给的用户账号 (必填)")
+	bugAssignCmd.Flags().StringVar(&bugComment, "comment", "", "指派备注说明")
+
+	bugConfirmCmd.Flags().StringVar(&bugID, "id", "", "要确认的 Bug ID (必填)")
+	bugConfirmCmd.Flags().StringVar(&bugPri, "pri", "", "优先级")
+	bugConfirmCmd.Flags().StringVar(&bugAssignedTo, "assigned-to", "", "指派给的用户账号")
+	bugConfirmCmd.Flags().StringVar(&bugComment, "comment", "", "确认备注说明")
+
 	bugDeleteCmd.Flags().StringVar(&bugID, "id", "", "要删除的 Bug ID (必填)")
 
 	bugCmd.AddCommand(bugListCmd)
+	bugCmd.AddCommand(bugViewCmd)
 	bugCmd.AddCommand(bugParamsCmd)
 	bugCmd.AddCommand(bugCreateCmd)
+	bugCmd.AddCommand(bugEditCmd)
 	bugCmd.AddCommand(bugResolveParamsCmd)
 	bugCmd.AddCommand(bugResolveCmd)
+	bugCmd.AddCommand(bugCloseCmd)
+	bugCmd.AddCommand(bugActivateCmd)
+	bugCmd.AddCommand(bugAssignCmd)
+	bugCmd.AddCommand(bugConfirmCmd)
 	bugCmd.AddCommand(bugDeleteCmd)
 }

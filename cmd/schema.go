@@ -62,7 +62,7 @@ func buildCommandSchema(cmd *cobra.Command, compact bool) CommandSchema {
 	risk := "low"
 	name := cmd.Name()
 
-	if strings.Contains(name, "create") || strings.Contains(name, "add") || strings.Contains(name, "finish") || strings.Contains(name, "resolve") || strings.Contains(name, "login") || strings.Contains(name, "start") || strings.Contains(name, "close") {
+	if strings.Contains(name, "create") || strings.Contains(name, "add") || strings.Contains(name, "finish") || strings.Contains(name, "resolve") || strings.Contains(name, "login") || strings.Contains(name, "start") || strings.Contains(name, "close") || strings.Contains(name, "edit") || strings.Contains(name, "pause") || strings.Contains(name, "restart") || strings.Contains(name, "cancel") || strings.Contains(name, "activate") || strings.Contains(name, "assign") || strings.Contains(name, "review") || strings.Contains(name, "change") || strings.Contains(name, "suspend") || strings.Contains(name, "confirm") {
 		effect = "write"
 		risk = "medium"
 	}

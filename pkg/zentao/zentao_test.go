@@ -608,3 +608,174 @@ func TestClient_HTMLErrorAndMessageExtraction(t *testing.T) {
 		t.Fatalf("expected fail message in error, got: %v", err)
 	}
 }
+
+func TestClient_AllModules_FullLifecycle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m := r.URL.Query().Get("m")
+		f := r.URL.Query().Get("f")
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"status": "success",
+			"data":   map[string]any{"module": m, "method": f, "result": "ok"},
+		})
+	}))
+	defer server.Close()
+
+	client := New(Config{URL: server.URL})
+	ctx := context.Background()
+
+	// Task
+	if _, err := client.TaskView(ctx, "1"); err != nil {
+		t.Fatalf("TaskView: %v", err)
+	}
+	if _, err := client.TaskEdit(ctx, "1", Params{"name": {"T1"}, "keywords": {"k1"}}); err != nil {
+		t.Fatalf("TaskEdit: %v", err)
+	}
+	if _, err := client.TaskStart(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskStart: %v", err)
+	}
+	if _, err := client.TaskPause(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskPause: %v", err)
+	}
+	if _, err := client.TaskRestart(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskRestart: %v", err)
+	}
+	if _, err := client.TaskClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskClose: %v", err)
+	}
+	if _, err := client.TaskCancel(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskCancel: %v", err)
+	}
+	if _, err := client.TaskActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TaskActivate: %v", err)
+	}
+	if _, err := client.TaskAssign(ctx, "1", Params{"assignedTo": {"dev"}}); err != nil {
+		t.Fatalf("TaskAssign: %v", err)
+	}
+
+	// Bug
+	if _, err := client.BugView(ctx, "1"); err != nil {
+		t.Fatalf("BugView: %v", err)
+	}
+	if _, err := client.BugEdit(ctx, "1", Params{"title": {"B1"}, "keywords": {"k2"}}); err != nil {
+		t.Fatalf("BugEdit: %v", err)
+	}
+	if _, err := client.BugClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("BugClose: %v", err)
+	}
+	if _, err := client.BugActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("BugActivate: %v", err)
+	}
+	if _, err := client.BugAssign(ctx, "1", Params{"assignedTo": {"dev"}}); err != nil {
+		t.Fatalf("BugAssign: %v", err)
+	}
+	if _, err := client.BugConfirm(ctx, "1", Params{}); err != nil {
+		t.Fatalf("BugConfirm: %v", err)
+	}
+
+	// Story
+	if _, err := client.StoryList(ctx, Params{"product": {"1"}}); err != nil {
+		t.Fatalf("StoryList: %v", err)
+	}
+	if _, err := client.StoryView(ctx, "1"); err != nil {
+		t.Fatalf("StoryView: %v", err)
+	}
+	if _, err := client.StoryCreateParams(ctx, "1", "0"); err != nil {
+		t.Fatalf("StoryCreateParams: %v", err)
+	}
+	if _, err := client.StoryCreate(ctx, Params{"product": {"1"}, "title": {"S1"}, "keywords": {"k3"}}); err != nil {
+		t.Fatalf("StoryCreate: %v", err)
+	}
+	if _, err := client.StoryEdit(ctx, "1", Params{"title": {"S1_updated"}}); err != nil {
+		t.Fatalf("StoryEdit: %v", err)
+	}
+	if _, err := client.StoryReview(ctx, "1", Params{"result": {"pass"}}); err != nil {
+		t.Fatalf("StoryReview: %v", err)
+	}
+	if _, err := client.StoryChange(ctx, "1", Params{"title": {"S1_changed"}}); err != nil {
+		t.Fatalf("StoryChange: %v", err)
+	}
+	if _, err := client.StoryClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("StoryClose: %v", err)
+	}
+	if _, err := client.StoryActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("StoryActivate: %v", err)
+	}
+	if _, err := client.StoryAssign(ctx, "1", Params{"assignedTo": {"po"}}); err != nil {
+		t.Fatalf("StoryAssign: %v", err)
+	}
+	if _, err := client.StoryDelete(ctx, "1"); err != nil {
+		t.Fatalf("StoryDelete: %v", err)
+	}
+
+	// Project
+	if _, err := client.ProjectView(ctx, "1"); err != nil {
+		t.Fatalf("ProjectView: %v", err)
+	}
+	if _, err := client.ProjectEdit(ctx, "1", Params{"name": {"P1"}}); err != nil {
+		t.Fatalf("ProjectEdit: %v", err)
+	}
+	if _, err := client.ProjectStart(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProjectStart: %v", err)
+	}
+	if _, err := client.ProjectSuspend(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProjectSuspend: %v", err)
+	}
+	if _, err := client.ProjectActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProjectActivate: %v", err)
+	}
+	if _, err := client.ProjectClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProjectClose: %v", err)
+	}
+	if _, err := client.ProjectDelete(ctx, "1"); err != nil {
+		t.Fatalf("ProjectDelete: %v", err)
+	}
+
+	// Product
+	if _, err := client.ProductView(ctx, "1"); err != nil {
+		t.Fatalf("ProductView: %v", err)
+	}
+	if _, err := client.ProductEdit(ctx, "1", Params{"name": {"Prod1"}}); err != nil {
+		t.Fatalf("ProductEdit: %v", err)
+	}
+	if _, err := client.ProductClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProductClose: %v", err)
+	}
+	if _, err := client.ProductActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ProductActivate: %v", err)
+	}
+	if _, err := client.ProductDelete(ctx, "1"); err != nil {
+		t.Fatalf("ProductDelete: %v", err)
+	}
+
+	// Todo
+	if _, err := client.TodoView(ctx, "1"); err != nil {
+		t.Fatalf("TodoView: %v", err)
+	}
+	if _, err := client.TodoEdit(ctx, "1", Params{"name": {"Todo1"}}); err != nil {
+		t.Fatalf("TodoEdit: %v", err)
+	}
+	if _, err := client.TodoActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("TodoActivate: %v", err)
+	}
+	if _, err := client.TodoAssign(ctx, "1", Params{"assignedTo": {"dev"}}); err != nil {
+		t.Fatalf("TodoAssign: %v", err)
+	}
+
+	// User & Dept
+	if _, err := client.UserView(ctx, "1"); err != nil {
+		t.Fatalf("UserView: %v", err)
+	}
+	if _, err := client.UserEdit(ctx, "1", Params{"realname": {"Admin"}}); err != nil {
+		t.Fatalf("UserEdit: %v", err)
+	}
+	if _, err := client.UserDelete(ctx, "1"); err != nil {
+		t.Fatalf("UserDelete: %v", err)
+	}
+	if _, err := client.DeptEdit(ctx, "1", Params{"name": {"RD"}}); err != nil {
+		t.Fatalf("DeptEdit: %v", err)
+	}
+	if _, err := client.DeptDelete(ctx, "1"); err != nil {
+		t.Fatalf("DeptDelete: %v", err)
+	}
+}

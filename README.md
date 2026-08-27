@@ -198,6 +198,15 @@ zentao todo finish --id 3                                    # 标记完成 (don
 zentao todo close --id 3                                     # 标记关闭 (closed)
 zentao todo delete --id 3                                    # 删除待办事项
 
+# 待办管理
+zentao todo list --type today -o table                       # 今日待办
+zentao todo view --id 12 -o json                             # 查看待办详情
+zentao todo create --name "代码评审" --date "2026-08-27"      # 创建待办
+zentao todo edit --id 12 --name "代码评审与验证"              # 修改待办
+zentao todo start --id 12                                    # 开始待办
+zentao todo finish --id 12                                   # 完成待办
+zentao todo close --id 12                                    # 关闭待办
+
 # 我的需求与项目
 zentao my story --type assignedTo -o table                   # 指派给我的需求
 zentao my project --status doing -o table                    # 我参与的进行中项目
@@ -206,27 +215,50 @@ zentao my dynamic --type today -o text                       # 今天的操作�
 
 ---
 
-### 2. 项目、产品与任务管理 (`project` / `product` / `task`)
+### 2. 项目、产品、需求与任务管理 (`project` / `product` / `story` / `task`)
 
 ```bash
 # 产品管理
 zentao product list --status noclosed -o table               # 查询正常运营中的产品
+zentao product view --id 8 -o json                           # 查看产品详情
 zentao product params --program 0                            # 获取创建产品所需的元数据字典
-zentao product add --name "移动应用" --code "app" --po "po_user"
+zentao product create --name "移动应用" --code "app" --po "po_user" # 创建产品
+zentao product edit --id 8 --name "移动应用 Pro"             # 修改产品
+zentao product close --id 8                                  # 关闭产品
 
 # 项目管理
 zentao project list --status doing -o table                  # 查询进行中的项目
-zentao project list --status all -o table                    # 查询全部项目
+zentao project view --id 109 -o json                         # 查看项目详情
 zentao project params --program 0                            # 获取创建项目所需的元数据字典
-zentao project add --name "Sprint 2" --code "s2" --begin "2026-09-01" --end "2026-09-15"
+zentao project create --name "Sprint 2" --code "s2" --begin "2026-09-01" --end "2026-09-15"
+zentao project edit --id 109 --name "Sprint 2 (已调整)"      # 修改项目
+zentao project start --id 109                                # 开始项目
+zentao project suspend --id 109                              # 挂起项目
+zentao project activate --id 109                             # 激活项目
+zentao project close --id 109                                # 关闭项目
+
+# 需求管理
+zentao story list --product 8 -o table                       # 查询产品需求列表
+zentao story view --id 55 -o json                            # 查看需求详情
+zentao story params --product 8                              # 获取创建需求元数据
+zentao story create --product 8 --title "支持微信支付" --keywords "支付,微信" --spec "用户可在结算页使用微信支付"
+zentao story edit --id 55 --keywords "支付,微信,扫码"        # 修改需求/更新关键词
+zentao story review --id 55 --result pass                    # 评审需求
+zentao story change --id 55 --spec "更新后的需求规格说明"      # 变更需求
+zentao story close --id 55 --reason done                     # 关闭需求
 
 # 任务管理
 zentao task list --project 109 --status doing -o table       # 查询执行 109 下进行中的任务
-zentao task list --project 109 --status all -o table         # 查询全部任务
+zentao task view --id 657 -o json                            # 查看任务详情
 zentao task params --project 109                             # 获取创建任务所需的模块与指派人元数据
-zentao task create --project 109 --name "实现登录API" --assigned-to "testuser" --estimate 4.0
+zentao task create --project 109 --name "实现登录API" --keywords "认证,JWT" --assigned-to "testuser" --estimate 4.0
+zentao task edit --id 657 --keywords "认证,JWT,OAuth"        # 修改任务/更新关键词
+zentao task start --id 657 --real-started "2026-08-27 09:30:00" # 开始执行任务
+zentao task pause --id 657                                   # 暂停任务
+zentao task restart --id 657                                 # 重启/继续任务
 zentao task finish-params --id 657                           # 获取完成任务所需的当前状态与表单元数据
 zentao task finish --id 657 --real 2.0 --comment "已完成单元测试覆盖"
+zentao task close --id 657                                   # 关闭任务
 zentao task delete --id 657 --project 109                    # 删除指定任务
 ```
 
@@ -237,11 +269,15 @@ zentao task delete --id 657 --project 109                    # 删除指定任�
 ```bash
 # 查询产品 Bug
 zentao bug list --product 8 --browse-type unclosed -o table  # 未关闭的缺陷
+zentao bug view --id 2862 -o json                            # 查看 Bug 详情
 zentao bug list --product 8 --browse-type assigntome -o table # 指派给我的缺陷
 zentao bug params --product 8                                # 获取提交 Bug 的版本与元数据
-zentao bug create --product 8 --title "登录页崩溃" --severity 2 --assigned-to "testuser"
+zentao bug create --product 8 --title "登录页崩溃" --keywords "崩溃,前端" --severity 2 --assigned-to "testuser"
+zentao bug edit --id 2862 --keywords "崩溃,前端,Safari"       # 修改 Bug/更新关键词
 zentao bug resolve-params --id 2862                          # 获取解决 Bug 的方案与构建版本元数据
 zentao bug resolve --id 2862 --resolution fixed --comment "已修复并在本地验证"
+zentao bug close --id 2862                                   # 关闭 Bug
+zentao bug activate --id 2862 --comment "在iOS端重现，重新打开" # 激活 Bug
 zentao bug delete --id 2862                                  # 删除指定 Bug
 ```
 
@@ -251,10 +287,13 @@ zentao bug delete --id 2862                                  # 删除指定 Bug
 
 ```bash
 zentao user list -o table                                    # 查询公司成员列表
+zentao user view --id 12 -o json                             # 查看用户详情
 zentao user params --dept 1                                  # 获取创建用户所需的部门树与角色元数据
-zentao user add --username "tom" --user-password "pwd" --realname "Tom"
+zentao user create --username "tom" --user-password "pwd" --realname "Tom"
+zentao user edit --id 12 --realname "Thomas"                 # 修改用户信息
 zentao dept list -o table                                    # 查询部门层级结构
-zentao dept add --parent 1 --name "前端组"                   # 添加子部门
+zentao dept create --parent 1 --name "前端组"                # 添加子部门
+zentao dept edit --id 3 --name "移动端研发组"                # 修改部门
 ```
 
 ---

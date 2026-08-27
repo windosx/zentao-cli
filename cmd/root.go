@@ -60,6 +60,9 @@ var RootCmd = &cobra.Command{
 			bindProfileToClient(profile)
 		}
 
+		// Silently auto-sync existing installed SKILL.md to the latest version on binary update
+		AutoSyncInstalledSkills()
+
 		return nil
 	},
 }
@@ -156,6 +159,7 @@ func init() {
 	RootCmd.AddCommand(todoCmd)
 	RootCmd.AddCommand(taskCmd)
 	RootCmd.AddCommand(bugCmd)
+	RootCmd.AddCommand(storyCmd)
 	RootCmd.AddCommand(projectCmd)
 	RootCmd.AddCommand(productCmd)
 	RootCmd.AddCommand(userCmd)

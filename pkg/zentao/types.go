@@ -97,6 +97,7 @@ type Task struct {
 	ID             string `json:"id"`
 	Parent         string `json:"parent"`
 	Project        string `json:"project"`
+	Execution      string `json:"execution"`
 	Module         string `json:"module"`
 	Story          string `json:"story"`
 	StoryVersion   string `json:"storyVersion"`
@@ -110,12 +111,14 @@ type Task struct {
 	Deadline       string `json:"deadline"`
 	Status         string `json:"status"`
 	Color          string `json:"color"`
+	Keywords       string `json:"keywords"`
 	Mailto         string `json:"mailto"`
 	Desc           string `json:"desc"`
 	OpenedBy       string `json:"openedBy"`
 	OpenedDate     string `json:"openedDate"`
 	AssignedTo     string `json:"assignedTo"`
 	AssignedDate   string `json:"assignedDate"`
+	AssignedBy     string `json:"assignedBy"`
 	EstStarted     string `json:"estStarted"`
 	RealStarted    string `json:"realStarted"`
 	FinishedBy     string `json:"finishedBy"`
@@ -128,63 +131,70 @@ type Task struct {
 	ClosedReason   string `json:"closedReason"`
 	LastEditedBy   string `json:"lastEditedBy"`
 	LastEditedDate string `json:"lastEditedDate"`
+	Version        string `json:"version"`
+	PriOrder       string `json:"priOrder"`
 	Deleted        string `json:"deleted"`
 }
 
-// Bug represents a ZenTao bug.
-type Bug struct {
+// Story represents a ZenTao story/requirement.
+type Story struct {
 	ID             string `json:"id"`
 	Product        string `json:"product"`
 	Branch         string `json:"branch"`
 	Module         string `json:"module"`
-	Project        string `json:"project"`
-	Story          string `json:"story"`
-	StoryVersion   string `json:"storyVersion"`
-	Task           string `json:"task"`
-	ToTask         string `json:"toTask"`
-	ToStory        string `json:"toStory"`
+	Plan           string `json:"plan"`
+	Source         string `json:"source"`
+	SourceNote     string `json:"sourceNote"`
+	FromBug        string `json:"fromBug"`
 	Title          string `json:"title"`
 	Keywords       string `json:"keywords"`
-	Severity       string `json:"severity"`
-	Pri            string `json:"pri"`
 	Type           string `json:"type"`
-	OS             string `json:"os"`
-	Browser        string `json:"browser"`
-	Hardware       string `json:"hardware"`
-	Found          string `json:"found"`
-	Steps          string `json:"steps"`
+	Category       string `json:"category"`
+	Pri            string `json:"pri"`
+	Estimate       string `json:"estimate"`
 	Status         string `json:"status"`
 	SubStatus      string `json:"subStatus"`
 	Color          string `json:"color"`
-	Confirmed      string `json:"confirmed"`
-	ActivatedCount string `json:"activatedCount"`
-	ActivatedDate  string `json:"activatedDate"`
+	Stage          string `json:"stage"`
+	StagedBy       string `json:"stagedBy"`
 	Mailto         string `json:"mailto"`
 	OpenedBy       string `json:"openedBy"`
 	OpenedDate     string `json:"openedDate"`
-	OpenedBuild    string `json:"openedBuild"`
 	AssignedTo     string `json:"assignedTo"`
 	AssignedDate   string `json:"assignedDate"`
-	Deadline       string `json:"deadline"`
-	ResolvedBy     string `json:"resolvedBy"`
-	Resolution     string `json:"resolution"`
-	ResolvedBuild  string `json:"resolvedBuild"`
-	ResolvedDate   string `json:"resolvedDate"`
-	ClosedBy       string `json:"closedBy"`
-	ClosedDate     string `json:"closedDate"`
-	DuplicateBug   string `json:"duplicateBug"`
-	LinkBug        string `json:"linkBug"`
-	Case           string `json:"case"`
-	CaseVersion    string `json:"caseVersion"`
-	Result         string `json:"result"`
-	Repo           string `json:"repo"`
-	Entry          string `json:"entry"`
-	Lines          string `json:"lines"`
-	V1             string `json:"v1"`
-	V2             string `json:"v2"`
-	RepoType       string `json:"repoType"`
-	Testtask       string `json:"testtask"`
 	LastEditedBy   string `json:"lastEditedBy"`
 	LastEditedDate string `json:"lastEditedDate"`
+	ReviewedBy     string `json:"reviewedBy"`
+	ReviewedDate   string `json:"reviewedDate"`
+	ClosedBy       string `json:"closedBy"`
+	ClosedDate     string `json:"closedDate"`
+	ClosedReason   string `json:"closedReason"`
+	ToBug          string `json:"toBug"`
+	Spec           string `json:"spec"`
+	Verify         string `json:"verify"`
+	Version        string `json:"version"`
 	Deleted        string `json:"deleted"`
+}
+
+// Todo represents a ZenTao todo item.
+type Todo struct {
+	ID           string `json:"id"`
+	Account      string `json:"account"`
+	Date         string `json:"date"`
+	Begin        string `json:"begin"`
+	End          string `json:"end"`
+	Type         string `json:"type"`
+	IDValue      string `json:"idvalue"`
+	Pri          string `json:"pri"`
+	Name         string `json:"name"`
+	Desc         string `json:"desc"`
+	Status       string `json:"status"`
+	Private      string `json:"private"`
+	AssignedBy   string `json:"assignedBy"`
+	AssignedDate string `json:"assignedDate"`
+	FinishedBy   string `json:"finishedBy"`
+	FinishedDate string `json:"finishedDate"`
+	ClosedBy     string `json:"closedBy"`
+	ClosedDate   string `json:"closedDate"`
+	Deleted      string `json:"deleted"`
 }

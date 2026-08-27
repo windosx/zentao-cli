@@ -46,6 +46,29 @@ func (c *Client) DeptAdd(ctx context.Context, params Params) (json.RawMessage, e
 	return c.call(ctx, http.MethodPost, "dept", "manageChild", params)
 }
 
+// DeptEdit edits a department (POST m=dept&f=edit&deptID=<id>).
+func (c *Client) DeptEdit(ctx context.Context, deptID string, params Params) (json.RawMessage, error) {
+	if deptID == "" {
+		return nil, fmt.Errorf("%w: dept edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "dept", "edit", routeParam{Key: "deptID", Value: deptID}, params)
+}
+
+// DeptDelete deletes a department (GET/POST m=dept&f=delete&deptID=<id>&confirm=yes).
+func (c *Client) DeptDelete(ctx context.Context, deptID string) (json.RawMessage, error) {
+	if deptID == "" {
+		return nil, fmt.Errorf("%w: dept delete: deptID is required", ErrValidation)
+	}
+	params := Params{
+		"deptID":  {deptID},
+		"confirm": {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "dept", "delete", params)
+}
+
 // ---- User ----
 
 // UserList returns users (m=company&f=browse).
@@ -61,6 +84,47 @@ func (c *Client) UserList(ctx context.Context, params Params) (json.RawMessage, 
 	}
 	merged := mergeDefaults(params, defaults)
 	return c.call(ctx, http.MethodGet, "company", "browse", merged)
+}
+
+// UserView returns details of a user (GET m=user&f=view&userID=<id>).
+func (c *Client) UserView(ctx context.Context, userID string) (json.RawMessage, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("%w: user view: userID is required", ErrValidation)
+	}
+	params := Params{"userID": {userID}}
+	return c.call(ctx, http.MethodGet, "user", "view", params)
+}
+
+// UserEditParams returns parameters and metadata needed to edit a user (m=user&f=edit&userID=<id>).
+func (c *Client) UserEditParams(ctx context.Context, userID string) (json.RawMessage, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("%w: user edit params: userID is required", ErrValidation)
+	}
+	params := Params{"userID": {userID}}
+	return c.call(ctx, http.MethodGet, "user", "edit", params)
+}
+
+// UserEdit updates a user (POST m=user&f=edit&userID=<id>).
+func (c *Client) UserEdit(ctx context.Context, userID string, params Params) (json.RawMessage, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("%w: user edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "user", "edit", routeParam{Key: "userID", Value: userID}, params)
+}
+
+// UserDelete deletes a user (GET/POST m=user&f=delete&userID=<id>&confirm=yes).
+func (c *Client) UserDelete(ctx context.Context, userID string) (json.RawMessage, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("%w: user delete: userID is required", ErrValidation)
+	}
+	params := Params{
+		"userID":  {userID},
+		"confirm": {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "user", "delete", params)
 }
 
 // UserCreateParams returns parameters and schema needed to create a user (m=user&f=create&dept=<dept>).
@@ -179,6 +243,69 @@ func (c *Client) ProductAdd(ctx context.Context, params Params) (json.RawMessage
 	return c.call(ctx, http.MethodPost, "product", "create", params)
 }
 
+// ProductView returns details of a product (GET m=product&f=view&productID=<id>).
+func (c *Client) ProductView(ctx context.Context, productID string) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product view: productID is required", ErrValidation)
+	}
+	params := Params{"productID": {productID}}
+	return c.call(ctx, http.MethodGet, "product", "view", params)
+}
+
+// ProductEditParams returns parameters and metadata needed to edit a product (m=product&f=edit&productID=<id>).
+func (c *Client) ProductEditParams(ctx context.Context, productID string) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product edit params: productID is required", ErrValidation)
+	}
+	params := Params{"productID": {productID}}
+	return c.call(ctx, http.MethodGet, "product", "edit", params)
+}
+
+// ProductEdit updates a product (POST m=product&f=edit&productID=<id>).
+func (c *Client) ProductEdit(ctx context.Context, productID string, params Params) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "product", "edit", routeParam{Key: "productID", Value: productID}, params)
+}
+
+// ProductClose closes a product (POST m=product&f=close&productID=<id>).
+func (c *Client) ProductClose(ctx context.Context, productID string, params Params) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "product", "close", routeParam{Key: "productID", Value: productID}, params)
+}
+
+// ProductActivate activates a closed product (POST m=product&f=activate&productID=<id>).
+func (c *Client) ProductActivate(ctx context.Context, productID string, params Params) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "product", "activate", routeParam{Key: "productID", Value: productID}, params)
+}
+
+// ProductDelete deletes a product (GET/POST m=product&f=delete&productID=<id>&confirm=yes).
+func (c *Client) ProductDelete(ctx context.Context, productID string) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: product delete: productID is required", ErrValidation)
+	}
+	params := Params{
+		"productID": {productID},
+		"confirm":   {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "product", "delete", params)
+}
+
 // ---- Project ----
 
 // ProjectList returns projects.
@@ -229,6 +356,91 @@ func (c *Client) ProjectCreateParams(ctx context.Context, programID string) (jso
 // name, code, begin, end, days, team, type, status, acl, PM, PO, QD, RD, desc.
 func (c *Client) ProjectAdd(ctx context.Context, params Params) (json.RawMessage, error) {
 	return c.call(ctx, http.MethodPost, "project", "create", params)
+}
+
+// ProjectView returns details of a project (GET m=project&f=view&projectID=<id>).
+func (c *Client) ProjectView(ctx context.Context, projectID string) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project view: projectID is required", ErrValidation)
+	}
+	params := Params{"projectID": {projectID}}
+	return c.call(ctx, http.MethodGet, "project", "view", params)
+}
+
+// ProjectEditParams returns parameters and metadata needed to edit a project (m=project&f=edit&projectID=<id>).
+func (c *Client) ProjectEditParams(ctx context.Context, projectID string) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project edit params: projectID is required", ErrValidation)
+	}
+	params := Params{"projectID": {projectID}}
+	return c.call(ctx, http.MethodGet, "project", "edit", params)
+}
+
+// ProjectEdit updates a project (POST m=project&f=edit&projectID=<id>).
+func (c *Client) ProjectEdit(ctx context.Context, projectID string, params Params) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "project", "edit", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ProjectStart starts a project (POST m=project&f=start&projectID=<id>).
+func (c *Client) ProjectStart(ctx context.Context, projectID string, params Params) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project start: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "project", "start", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ProjectSuspend suspends a project (POST m=project&f=suspend&projectID=<id>).
+func (c *Client) ProjectSuspend(ctx context.Context, projectID string, params Params) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project suspend: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "project", "suspend", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ProjectActivate activates a suspended or closed project (POST m=project&f=activate&projectID=<id>).
+func (c *Client) ProjectActivate(ctx context.Context, projectID string, params Params) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "project", "activate", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ProjectClose closes a project (POST m=project&f=close&projectID=<id>).
+func (c *Client) ProjectClose(ctx context.Context, projectID string, params Params) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "project", "close", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ProjectDelete deletes a project (GET/POST m=project&f=delete&projectID=<id>&confirm=yes).
+func (c *Client) ProjectDelete(ctx context.Context, projectID string) (json.RawMessage, error) {
+	if projectID == "" {
+		return nil, fmt.Errorf("%w: project delete: projectID is required", ErrValidation)
+	}
+	params := Params{
+		"projectID": {projectID},
+		"confirm":   {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "project", "delete", params)
 }
 
 // ---- Task ----
@@ -283,7 +495,7 @@ func (c *Client) TaskCreateParams(ctx context.Context, projectID string) (json.R
 }
 
 // TaskCreate creates a task (POST m=task&f=create&project=<id>). Common
-// fields: name, type, pri, estimate, assignedTo, module, story, desc.
+// fields: name, type, pri, estimate, assignedTo, module, story, desc, keywords, mailto, deadline, estStarted.
 func (c *Client) TaskCreate(ctx context.Context, params Params) (json.RawMessage, error) {
 	project := params.Get("project")
 	if project == "" {
@@ -293,6 +505,112 @@ func (c *Client) TaskCreate(ctx context.Context, params Params) (json.RawMessage
 		return nil, fmt.Errorf("%w: task create: --project is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "task", "create", routeParam{Key: "project", Value: project}, params)
+}
+
+// TaskView returns details of a task (GET m=task&f=view&taskID=<id>).
+func (c *Client) TaskView(ctx context.Context, taskID string) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task view: taskID is required", ErrValidation)
+	}
+	params := Params{"taskID": {taskID}}
+	return c.call(ctx, http.MethodGet, "task", "view", params)
+}
+
+// TaskEditParams returns parameters and schema needed to edit a task (m=task&f=edit&taskID=<id>).
+func (c *Client) TaskEditParams(ctx context.Context, taskID string) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task edit params: taskID is required", ErrValidation)
+	}
+	params := Params{"taskID": {taskID}}
+	return c.call(ctx, http.MethodGet, "task", "edit", params)
+}
+
+// TaskEdit updates a task (POST m=task&f=edit&taskID=<id>).
+func (c *Client) TaskEdit(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "edit", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskStart starts a task (POST m=task&f=start&taskID=<id>).
+func (c *Client) TaskStart(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task start: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "start", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskPause pauses a task (POST m=task&f=pause&taskID=<id>).
+func (c *Client) TaskPause(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task pause: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "pause", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskRestart restarts a paused task (POST m=task&f=restart&taskID=<id>).
+func (c *Client) TaskRestart(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task restart: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "restart", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskClose closes a completed or canceled task (POST m=task&f=close&taskID=<id>).
+func (c *Client) TaskClose(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "close", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskCancel cancels a task (POST m=task&f=cancel&taskID=<id>).
+func (c *Client) TaskCancel(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task cancel: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "cancel", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskActivate activates a task (POST m=task&f=activate&taskID=<id>).
+func (c *Client) TaskActivate(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "activate", routeParam{Key: "taskID", Value: taskID}, params)
+}
+
+// TaskAssign assigns a task to a user (POST m=task&f=assignTo&taskID=<id>).
+func (c *Client) TaskAssign(ctx context.Context, taskID string, params Params) (json.RawMessage, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("%w: task assign: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "assignTo", routeParam{Key: "taskID", Value: taskID}, params)
 }
 
 // TaskFinishParams returns parameters and current state needed to finish a task (m=task&f=finish&taskID=<id>).
@@ -415,6 +733,79 @@ func (c *Client) BugCreate(ctx context.Context, params Params) (json.RawMessage,
 	return c.callRoute(ctx, http.MethodPost, "bug", "create", routeParam{Key: "productID", Value: product}, body)
 }
 
+// BugView returns details of a bug (GET m=bug&f=view&bugID=<id>).
+func (c *Client) BugView(ctx context.Context, bugID string) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug view: bugID is required", ErrValidation)
+	}
+	params := Params{"bugID": {bugID}}
+	return c.call(ctx, http.MethodGet, "bug", "view", params)
+}
+
+// BugEditParams returns parameters and schema needed to edit a bug (m=bug&f=edit&bugID=<id>).
+func (c *Client) BugEditParams(ctx context.Context, bugID string) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug edit params: bugID is required", ErrValidation)
+	}
+	params := Params{"bugID": {bugID}}
+	return c.call(ctx, http.MethodGet, "bug", "edit", params)
+}
+
+// BugEdit updates a bug (POST m=bug&f=edit&bugID=<id>).
+func (c *Client) BugEdit(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "bug", "edit", routeParam{Key: "bugID", Value: bugID}, params)
+}
+
+// BugClose closes a resolved or active bug (POST m=bug&f=close&bugID=<id>).
+func (c *Client) BugClose(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "bug", "close", routeParam{Key: "bugID", Value: bugID}, params)
+}
+
+// BugActivate activates a resolved or closed bug (POST m=bug&f=activate&bugID=<id>).
+func (c *Client) BugActivate(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "bug", "activate", routeParam{Key: "bugID", Value: bugID}, params)
+}
+
+// BugAssign assigns a bug to a user (POST m=bug&f=assignTo&bugID=<id>).
+func (c *Client) BugAssign(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug assign: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "bug", "assignTo", routeParam{Key: "bugID", Value: bugID}, params)
+}
+
+// BugConfirm confirms a bug (POST m=bug&f=confirmBug&bugID=<id>).
+func (c *Client) BugConfirm(ctx context.Context, bugID string, params Params) (json.RawMessage, error) {
+	if bugID == "" {
+		return nil, fmt.Errorf("%w: bug confirm: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "bug", "confirmBug", routeParam{Key: "bugID", Value: bugID}, params)
+}
+
 // BugResolveParams returns parameters and schema needed to resolve a bug (m=bug&f=resolve&bugID=<id>).
 func (c *Client) BugResolveParams(ctx context.Context, bugID string) (json.RawMessage, error) {
 	if bugID == "" {
@@ -453,6 +844,181 @@ func (c *Client) BugDelete(ctx context.Context, bugID string) (json.RawMessage, 
 		"confirm": {"yes"},
 	}
 	return c.call(ctx, http.MethodGet, "bug", "delete", params)
+}
+
+// ---- Story / Requirement ----
+
+// StoryList returns stories for a product (m=product&f=browse&storyType=story).
+func (c *Client) StoryList(ctx context.Context, params Params) (json.RawMessage, error) {
+	productID := params.Get("productID")
+	if productID == "" {
+		productID = params.Get("product")
+	}
+	if productID == "" {
+		productID = "0"
+	}
+
+	branch := params.Get("branch")
+	if branch == "" {
+		branch = StatusAll
+	}
+
+	browseType := params.Get("browseType")
+	if browseType == "" {
+		browseType = "unclosed"
+	}
+
+	storyType := params.Get("storyType")
+	if storyType == "" {
+		storyType = "story"
+	}
+
+	orderBy := params.Get("orderBy")
+	if orderBy == "" || orderBy == OrderDesc {
+		orderBy = OrderIDDesc
+	}
+
+	storyParams := Params{
+		"productID":  {productID},
+		"branch":     {branch},
+		"browseType": {browseType},
+		"param":      {"0"},
+		"storyType":  {storyType},
+		"orderBy":    {orderBy},
+		"recTotal":   {"999999"},
+		"recPerPage": {"999999"},
+	}
+
+	return c.call(ctx, http.MethodGet, "product", "browse", storyParams)
+}
+
+// StoryView returns details of a story (GET m=story&f=view&storyID=<id>).
+func (c *Client) StoryView(ctx context.Context, storyID string) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story view: storyID is required", ErrValidation)
+	}
+	params := Params{"storyID": {storyID}}
+	return c.call(ctx, http.MethodGet, "story", "view", params)
+}
+
+// StoryCreateParams returns parameters and schema needed to create a story (m=story&f=create&productID=<id>&branch=<b>).
+func (c *Client) StoryCreateParams(ctx context.Context, productID, branch string) (json.RawMessage, error) {
+	if productID == "" {
+		return nil, fmt.Errorf("%w: story create params: productID is required", ErrValidation)
+	}
+	if branch == "" {
+		branch = "0"
+	}
+	params := Params{"productID": {productID}, "branch": {branch}}
+	return c.call(ctx, http.MethodGet, "story", "create", params)
+}
+
+// StoryCreate creates a story (POST m=story&f=create&productID=<id>&branch=<b>).
+func (c *Client) StoryCreate(ctx context.Context, params Params) (json.RawMessage, error) {
+	product := params.Get("product")
+	if product == "" {
+		product = params.Get("productID")
+	}
+	if product == "" {
+		return nil, fmt.Errorf("%w: story create: --product is required", ErrValidation)
+	}
+
+	body := cloneParams(params)
+	if body.Get("type") == "" {
+		body.Set("type", "story")
+	}
+	if body.Get("pri") == "" {
+		body.Set("pri", "3")
+	}
+
+	return c.callRoute(ctx, http.MethodPost, "story", "create", routeParam{Key: "productID", Value: product}, body)
+}
+
+// StoryEditParams returns parameters and schema needed to edit a story (m=story&f=edit&storyID=<id>).
+func (c *Client) StoryEditParams(ctx context.Context, storyID string) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story edit params: storyID is required", ErrValidation)
+	}
+	params := Params{"storyID": {storyID}}
+	return c.call(ctx, http.MethodGet, "story", "edit", params)
+}
+
+// StoryEdit updates a story (POST m=story&f=edit&storyID=<id>).
+func (c *Client) StoryEdit(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "edit", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryReview reviews a story (POST m=story&f=review&storyID=<id>).
+func (c *Client) StoryReview(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story review: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "review", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryChange changes a story's specification/details (POST m=story&f=change&storyID=<id>).
+func (c *Client) StoryChange(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story change: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "change", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryClose closes a story (POST m=story&f=close&storyID=<id>).
+func (c *Client) StoryClose(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "close", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryActivate activates a story (POST m=story&f=activate&storyID=<id>).
+func (c *Client) StoryActivate(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "activate", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryAssign assigns a story to a user (POST m=story&f=assignTo&storyID=<id>).
+func (c *Client) StoryAssign(ctx context.Context, storyID string, params Params) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story assign: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "story", "assignTo", routeParam{Key: "storyID", Value: storyID}, params)
+}
+
+// StoryDelete deletes a story (GET/POST m=story&f=delete&storyID=<id>&confirm=yes).
+func (c *Client) StoryDelete(ctx context.Context, storyID string) (json.RawMessage, error) {
+	if storyID == "" {
+		return nil, fmt.Errorf("%w: story delete: storyID is required", ErrValidation)
+	}
+	params := Params{
+		"storyID": {storyID},
+		"confirm": {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "story", "delete", params)
 }
 
 // ---- My (Personal Workbench / Dashboard) ----
@@ -595,6 +1161,57 @@ func (c *Client) TodoClose(ctx context.Context, todoID string) (json.RawMessage,
 		return nil, fmt.Errorf("%w: todo close: --id is required", ErrValidation)
 	}
 	return c.callRoute(ctx, http.MethodPost, "todo", "close", routeParam{Key: "todoID", Value: todoID}, Params{})
+}
+
+// TodoView returns details of a todo item (GET m=todo&f=view&todoID=<id>).
+func (c *Client) TodoView(ctx context.Context, todoID string) (json.RawMessage, error) {
+	if todoID == "" {
+		return nil, fmt.Errorf("%w: todo view: todoID is required", ErrValidation)
+	}
+	params := Params{"todoID": {todoID}}
+	return c.call(ctx, http.MethodGet, "todo", "view", params)
+}
+
+// TodoEditParams returns parameters and metadata needed to edit a todo (m=todo&f=edit&todoID=<id>).
+func (c *Client) TodoEditParams(ctx context.Context, todoID string) (json.RawMessage, error) {
+	if todoID == "" {
+		return nil, fmt.Errorf("%w: todo edit params: todoID is required", ErrValidation)
+	}
+	params := Params{"todoID": {todoID}}
+	return c.call(ctx, http.MethodGet, "todo", "edit", params)
+}
+
+// TodoEdit updates a todo item (POST m=todo&f=edit&todoID=<id>).
+func (c *Client) TodoEdit(ctx context.Context, todoID string, params Params) (json.RawMessage, error) {
+	if todoID == "" {
+		return nil, fmt.Errorf("%w: todo edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "todo", "edit", routeParam{Key: "todoID", Value: todoID}, params)
+}
+
+// TodoActivate activates a completed/closed todo (POST m=todo&f=activate&todoID=<id>).
+func (c *Client) TodoActivate(ctx context.Context, todoID string, params Params) (json.RawMessage, error) {
+	if todoID == "" {
+		return nil, fmt.Errorf("%w: todo activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "todo", "activate", routeParam{Key: "todoID", Value: todoID}, params)
+}
+
+// TodoAssign assigns a todo to another user (POST m=todo&f=assignTo&todoID=<id>).
+func (c *Client) TodoAssign(ctx context.Context, todoID string, params Params) (json.RawMessage, error) {
+	if todoID == "" {
+		return nil, fmt.Errorf("%w: todo assign: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "todo", "assignTo", routeParam{Key: "todoID", Value: todoID}, params)
 }
 
 // TodoDelete deletes a todo by ID (GET/POST m=todo&f=delete&todoID=<id>&confirm=yes).

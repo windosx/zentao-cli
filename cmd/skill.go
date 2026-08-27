@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -21,9 +22,10 @@ var (
 )
 
 var skillSetupCmd = &cobra.Command{
-	Use:   "setup",
-	Short: "一键安装 zentao Agent Skill 到本地 AI Agent 运行环境",
-	Long:  "自动将 skills/zentao/SKILL.md 分发并写入 ~/.zcode/skills/zentao/、~/.agents/skills/zentao/ 与 ~/.claude/skills/zentao/ 目录。",
+	Use:     "setup",
+	Aliases: []string{"update", "sync"},
+	Short:   "安装或更新 zentao Agent Skill 到本地 AI Agent 运行环境",
+	Long:    "自动将内置最新的 SKILL.md 分发并写入 ~/.zcode/skills/zentao/、~/.agents/skills/zentao/ 与 ~/.claude/skills/zentao/ 目录。",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -63,9 +65,41 @@ var skillSetupCmd = &cobra.Command{
 		return printer.Success(map[string]any{
 			"status":         "installed",
 			"installedPaths": installedPaths,
-			"message":        fmt.Sprintf("已成功安装 zentao Agent Skill 到 %d 个目标环境", len(installedPaths)),
+			"message":        fmt.Sprintf("已成功安装/更新 zentao Agent Skill 到 %d 个目标环境", len(installedPaths)),
 		})
 	},
+}
+
+// AutoSyncInstalledSkills silently checks existing installed SKILL.md files in user's home directory.
+// If any installed file differs from embedded FS, it atomically overwrites it with the latest version.
+func AutoSyncInstalledSkills() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+
+	embeddedData, err := skills.FS.ReadFile("zentao/SKILL.md")
+	if err != nil || len(embeddedData) == 0 {
+		return
+	}
+
+	candidates := []string{
+		filepath.Join(home, ".zcode", "skills", "zentao", "SKILL.md"),
+		filepath.Join(home, ".agents", "skills", "zentao", "SKILL.md"),
+		filepath.Join(home, ".claude", "skills", "zentao", "SKILL.md"),
+	}
+
+	for _, p := range candidates {
+		// Only sync if the file already exists (i.e. user previously installed or uses this path)
+		existing, err := os.ReadFile(p)
+		if err != nil {
+			continue
+		}
+
+		if !bytes.Equal(existing, embeddedData) {
+			_ = copySkillFile("zentao/SKILL.md", p)
+		}
+	}
 }
 
 func copySkillFile(embeddedRelPath, destPath string) error {
@@ -97,7 +131,7 @@ func copySkillFile(embeddedRelPath, destPath string) error {
 }
 
 func init() {
-	skillSetupCmd.Flags().StringVar(&skillSetupTarget, "target", "all", "安装目标环境: all (全部), zcode, agents, claude")
+	skillSetupCmd.Flags().StringVar(&skillSetupTarget, "target", "all", "安装/更新目标环境: all (全部), zcode, agents, claude")
 
 	skillCmd.AddCommand(skillSetupCmd)
 }
