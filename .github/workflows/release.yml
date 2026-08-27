@@ -79,6 +79,7 @@ jobs:
     name: Publish Chocolatey Package
     needs: goreleaser
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
