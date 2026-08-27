@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+# reference-transaction hook (Git 2.29+)
+# Automatically intercepts and validates tag creation before the reference is committed.
+
+STATE="$1"
+if [ "$STATE" != "prepared" ]; then
+    exit 0
+fi
+
+# Regex for SemVer 2.0 with ZenTao build metadata: e.g. v1.0.9+21.7 or v1.0.9+21.7.1
+TAG_REGEX='^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+(\.[0-9]+)*$'
+
+while read -r old_oid new_oid refname; do
+    # Only validate tag creations/updates (ignore tag deletions where new_oid is all zeros)
+    if echo "$refname" | grep -q '^refs/tags/' && [ "$new_oid" != "0000000000000000000000000000000000000000" ]; then
+        if ! echo "$refname" | grep -E -q "$TAG_REGEX"; then
+            TAG_NAME=$(echo "$refname" | sed 's#^refs/tags/##')
+            echo "" >&2
+            echo "❌ [Git Tag 校验失败]: 标签 '$TAG_NAME' 不符合 SemVer 2.0 构建元数据规范！" >&2
+            echo "----------------------------------------------------------------------" >&2
+            echo "📌 必须遵循格式: v<主版本>.<次版本>.<修订号>+<禅道版本>" >&2
+            echo "💡 合法示例:     v1.0.9+21.7" >&2
+            echo "----------------------------------------------------------------------" >&2
+            echo "" >&2
+            exit 1
+        fi
+    fi
+done

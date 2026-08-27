@@ -262,6 +262,33 @@ zentao auth logout                                           # 注销并清除�
 
 ---
 
+### 6. 版本与兼容性查看 (`version`)
+
+本项目遵循 **SemVer 2.0 构建元数据规范 (Build Metadata)**，完整版本格式为 `vX.Y.Z+<zentao_version>`（例如 `v1.0.8+21.7`）：
+- `vX.Y.Z`：CLI 与 Go SDK 自身的语义化迭代版本；
+- `+21.7`：所深度对齐与兼容的禅道官方底层 API / PHP SDK 版本。
+
+```bash
+zentao version -o table
+```
+
+输出示例：
+```text
+KEY             VALUE
+---             -----
+arch            arm64
+buildDate       2026-08-27T08:00:00Z
+fullVersion     1.0.8+21.7
+gitCommit       18a46d1
+goVersion       go1.25.3
+os              darwin
+sdkVersion      zentaopms_21.7_20250516
+version         1.0.8
+zentaoCompat    v21.7+
+```
+
+---
+
 ## 🤖 AI Agent / 大模型 Tool Calling 集成
 
 ### 1. 静态技能挂载 (`SKILL.md`)

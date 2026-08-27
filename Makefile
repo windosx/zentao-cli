@@ -40,8 +40,8 @@ build:
 	go build -o $(BIN_DIR)/$(BINARY_NAME) main.go
 
 install-hooks:
-	@echo "==> Installing Git pre-commit hook..."
-	chmod +x .githooks/pre-commit
+	@echo "==> Installing Git hooks (pre-commit, reference-transaction, pre-push)..."
+	chmod +x .githooks/*
 	git config core.hooksPath .githooks
 	@echo "==> Git hooks configured successfully!"
 

@@ -23,6 +23,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate SemVer 2.0 Build Metadata Tag Format
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "==> Validating tag format for: $TAG"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "Error: Tag '$TAG' does not conform to SemVer 2.0 Build Metadata format (e.g. v1.0.9+21.7)" >&2
+            exit 1
+          fi
+          echo "==> Tag format is valid!"
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
