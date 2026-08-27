@@ -110,29 +110,6 @@ winget:
       name: windosx
       email: windosx@163.com
 
-# 3. Chocolatey for Windows (需在 windows-latest runner 上构建)
-chocolateys:
-  - name: zentao-cli
-    title: ZenTao CLI
-    owners: windosx
-    authors: windosx
-    project_url: "https://github.com/windosx/zentao-cli"
-    project_source_url: "https://github.com/windosx/zentao-cli"
-    docs_url: "https://github.com/windosx/zentao-cli#readme"
-    bug_tracker_url: "https://github.com/windosx/zentao-cli/issues"
-    license_url: "https://github.com/windosx/zentao-cli/blob/main/LICENSE"
-    require_license_acceptance: false
-    summary: "ZenTao PMS CLI and Go SDK"
-    description: |
-      ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
-      Provides zero-auth persistent sessions and full workbench support.
-    tags: "zentao zentao-cli cli sdk project-management agile"
-    # nupkg 由 ubuntu runner 构建生成到 dist/；实际 push 在 release.yml 的
-    # choco-publish job（windows-latest）中完成，避免 ubuntu 上缺少 choco 命令
-    skip_publish: true
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-    source_repo: "https://push.chocolatey.org/"
-
 snapshot:
   version_template: SNAPSHOT-{{ .Commit }}
 
