@@ -127,8 +127,9 @@ chocolateys:
       ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
       Provides zero-auth persistent sessions and full workbench support.
     tags: "zentao zentao-cli cli sdk project-management agile"
-    # 每次发版自动推送到 Chocolatey 官方源 (push.chocolatey.org)
-    skip_publish: false
+    # nupkg 由 ubuntu runner 构建生成到 dist/；实际 push 在 release.yml 的
+    # choco-publish job（windows-latest）中完成，避免 ubuntu 上缺少 choco 命令
+    skip_publish: true
     api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
     source_repo: "https://push.chocolatey.org/"
 
