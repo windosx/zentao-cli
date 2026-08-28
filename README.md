@@ -282,6 +282,7 @@ zentao task restart --id 657                                 # 重启/继续任�
 zentao task finish-params --id 657                           # 获取完成任务所需的当前状态与表单元数据
 zentao task finish --id 657 --real 2.0 --comment "已完成单元测试覆盖"
 zentao task close --id 657                                   # 关闭任务
+zentao task cancel --id 657 --comment "任务取消说明"          # 取消任务
 zentao task delete --id 657 --project 109                    # 删除指定任务
 ```
 
@@ -333,7 +334,16 @@ zentao auth logout                                           # 注销并清除�
 
 ---
 
-### 6. 版本与兼容性查看 (`version`)
+### 6. 配置文件管理 (`config`)
+
+```bash
+zentao config init --path .zentao.yaml                       # 初始化当前目录配置文件模板
+zentao config show -o table                                  # 查看当前生效配置参数与会话信息
+```
+
+---
+
+### 7. 版本与兼容性查看 (`version`)
 
 本项目遵循 **SemVer 2.0 构建元数据规范 (Build Metadata)**，完整版本格式为 `vX.Y.Z+<zentao_version>`（例如 `v1.0.8+21.7`）：
 - `vX.Y.Z`：CLI 与 Go SDK 自身的语义化迭代版本；

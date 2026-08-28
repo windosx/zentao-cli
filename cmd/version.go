@@ -68,3 +68,7 @@ var versionCmd = &cobra.Command{
 		return printer.Success(info)
 	},
 }
+
+func init() {
+	RootCmd.Version = resolveVersion()
+}

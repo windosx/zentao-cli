@@ -35,6 +35,9 @@ var deptListCmd = &cobra.Command{
 		if deptParentID != "" {
 			params.Set("deptID", deptParentID)
 		}
+		if err := applyPagination(cmd, params); err != nil {
+			return err
+		}
 
 		data, err := client.DeptList(ctx, params)
 		if err != nil {
@@ -132,6 +135,7 @@ var deptDeleteCmd = &cobra.Command{
 
 func init() {
 	deptListCmd.Flags().StringVar(&deptParentID, "parent", "", "父部门 ID (默认: 顶级/根部门)")
+	addPaginationFlags(deptListCmd)
 
 	deptCreateCmd.Flags().StringVar(&deptParentID, "parent", "0", "父部门 ID")
 	deptCreateCmd.Flags().StringSliceVar(&deptNames, "name", nil, "要添加的子部门名称列表 (可多次指定)")
