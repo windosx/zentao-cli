@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -36,7 +35,7 @@ var productListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "查询产品列表（支持按状态、产品线、项目集筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -75,7 +74,7 @@ var productViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -92,7 +91,7 @@ var productParamsCmd = &cobra.Command{
 	Use:   "params",
 	Short: "获取创建产品所需的元数据字典（产品线、PO/QD/RD 负责人、用户组等）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -117,7 +116,7 @@ var productCreateCmd = &cobra.Command{
 			return fmt.Errorf("--code 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -173,7 +172,7 @@ var productEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -235,7 +234,7 @@ var productCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -261,7 +260,7 @@ var productActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -287,12 +286,33 @@ var productDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.ProductDelete(ctx, productID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var productRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的产品",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if productID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "product", productID)
 		if err != nil {
 			return err
 		}
@@ -346,6 +366,7 @@ func init() {
 	productActivateCmd.Flags().StringVar(&productComment, "comment", "", "激活备注说明")
 
 	productDeleteCmd.Flags().StringVar(&productID, "id", "", "要删除的产品 ID (必填)")
+	productRestoreCmd.Flags().StringVar(&productID, "id", "", "要恢复的产品 ID (必填)")
 
 	productCmd.AddCommand(productListCmd)
 	productCmd.AddCommand(productViewCmd)
@@ -355,4 +376,5 @@ func init() {
 	productCmd.AddCommand(productCloseCmd)
 	productCmd.AddCommand(productActivateCmd)
 	productCmd.AddCommand(productDeleteCmd)
+	productCmd.AddCommand(productRestoreCmd)
 }

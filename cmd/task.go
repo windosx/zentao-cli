@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -18,6 +18,8 @@ var taskCmd = &cobra.Command{
 
 var (
 	taskProjectID    string
+	taskExecutionID  string
+	taskParentID     string
 	taskID           string
 	taskStatus       string
 	taskOrderBy      string
@@ -49,7 +51,7 @@ var taskListCmd = &cobra.Command{
 			return fmt.Errorf("--project 是必填参数（传入项目 ID 或执行/迭代 ID）")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -85,7 +87,7 @@ var taskViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -106,7 +108,7 @@ var taskParamsCmd = &cobra.Command{
 			return fmt.Errorf("--project 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -130,7 +132,7 @@ var taskCreateCmd = &cobra.Command{
 			return fmt.Errorf("--name 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -138,6 +140,12 @@ var taskCreateCmd = &cobra.Command{
 		params := zentao.Params{
 			"project": {taskProjectID},
 			"name":    {taskName},
+		}
+		if taskExecutionID != "" {
+			params.Set("execution", taskExecutionID)
+		}
+		if taskParentID != "" && taskParentID != "0" {
+			params.Set("parent", taskParentID)
 		}
 		if taskType != "" {
 			params.Set("type", taskType)
@@ -148,6 +156,13 @@ var taskCreateCmd = &cobra.Command{
 		if taskEstimate != "" {
 			params.Set("estimate", taskEstimate)
 		}
+		leftVal := taskLeft
+		if leftVal == "" && taskEstimate != "" {
+			leftVal = taskEstimate
+		}
+		if leftVal != "" {
+			params.Set("left", leftVal)
+		}
 		if taskAssignedTo != "" {
 			params.Set("assignedTo", taskAssignedTo)
 		}
@@ -156,9 +171,13 @@ var taskCreateCmd = &cobra.Command{
 		}
 		if taskModuleID != "" {
 			params.Set("module", taskModuleID)
+		} else {
+			params.Set("module", "0")
 		}
 		if taskStoryID != "" {
 			params.Set("story", taskStoryID)
+		} else {
+			params.Set("story", "0")
 		}
 		if taskKeywords != "" {
 			params.Set("keywords", taskKeywords)
@@ -189,12 +208,116 @@ var taskEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
+		// ZenTao's task/edit action requires full form validation on submit
+		// (including execution, type, name, status, assignedTo, estimate, left, consumed).
+		// We fetch existing task details to automatically preserve non-updated required fields.
+		existingData, err := client.TaskView(ctx, taskID)
+		if err == nil {
+			var viewResp struct {
+				Task struct {
+					Name       string `json:"name"`
+					Type       string `json:"type"`
+					Pri        any    `json:"pri"`
+					Estimate   any    `json:"estimate"`
+					Left       any    `json:"left"`
+					Consumed   any    `json:"consumed"`
+					AssignedTo string `json:"assignedTo"`
+					Desc       string `json:"desc"`
+					Module     any    `json:"module"`
+					Story      any    `json:"story"`
+					Keywords   string `json:"keywords"`
+					Mailto     string `json:"mailto"`
+					Deadline   any    `json:"deadline"`
+					EstStarted any    `json:"estStarted"`
+					Status     string `json:"status"`
+					Execution  any    `json:"execution"`
+					Parent     any    `json:"parent"`
+				} `json:"task"`
+			}
+			if err := json.Unmarshal(existingData, &viewResp); err == nil && viewResp.Task.Name != "" {
+				t := viewResp.Task
+				valToStr := func(v any) string {
+					if v == nil {
+						return ""
+					}
+					s := fmt.Sprint(v)
+					if s == "<nil>" || s == "null" {
+						return ""
+					}
+					return s
+				}
+
+				if !cmd.Flags().Changed("execution") && !cmd.Flags().Changed("project") {
+					taskExecutionID = valToStr(t.Execution)
+				}
+				if !cmd.Flags().Changed("parent") {
+					taskParentID = valToStr(t.Parent)
+				}
+				if !cmd.Flags().Changed("name") {
+					taskName = t.Name
+				}
+				if !cmd.Flags().Changed("type") {
+					taskType = t.Type
+				}
+				if !cmd.Flags().Changed("pri") {
+					taskPri = valToStr(t.Pri)
+				}
+				if !cmd.Flags().Changed("estimate") {
+					taskEstimate = valToStr(t.Estimate)
+				}
+				if !cmd.Flags().Changed("left") {
+					taskLeft = valToStr(t.Left)
+				}
+				if !cmd.Flags().Changed("consumed") {
+					taskConsumed = valToStr(t.Consumed)
+				}
+				if !cmd.Flags().Changed("assigned-to") {
+					taskAssignedTo = t.AssignedTo
+				}
+				if !cmd.Flags().Changed("desc") {
+					taskDesc = t.Desc
+				}
+				if !cmd.Flags().Changed("module") {
+					taskModuleID = valToStr(t.Module)
+				}
+				if !cmd.Flags().Changed("story") {
+					taskStoryID = valToStr(t.Story)
+				}
+				if !cmd.Flags().Changed("keywords") {
+					taskKeywords = t.Keywords
+				}
+				if !cmd.Flags().Changed("mailto") {
+					taskMailto = t.Mailto
+				}
+				if !cmd.Flags().Changed("deadline") {
+					taskDeadline = valToStr(t.Deadline)
+				}
+				if !cmd.Flags().Changed("est-started") {
+					taskEstStarted = valToStr(t.EstStarted)
+				}
+				if !cmd.Flags().Changed("status") {
+					taskStatus = t.Status
+				}
+			}
+		}
+
 		params := zentao.Params{}
+		exec := taskExecutionID
+		if exec == "" {
+			exec = taskProjectID
+		}
+		if exec != "" {
+			params.Set("execution", exec)
+			params.Set("project", exec)
+		}
+		if taskParentID != "" {
+			params.Set("parent", taskParentID)
+		}
 		if taskName != "" {
 			params.Set("name", taskName)
 		}
@@ -260,7 +383,7 @@ var taskStartCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -297,7 +420,7 @@ var taskPauseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -323,7 +446,7 @@ var taskRestartCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -352,7 +475,7 @@ var taskFinishParamsCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -373,7 +496,7 @@ var taskFinishCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -418,7 +541,7 @@ var taskCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -444,7 +567,7 @@ var taskCancelCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -470,7 +593,7 @@ var taskActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -505,7 +628,7 @@ var taskAssignCmd = &cobra.Command{
 			return fmt.Errorf("--assigned-to 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -539,7 +662,7 @@ var taskDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -557,8 +680,30 @@ var taskDeleteCmd = &cobra.Command{
 	},
 }
 
+var taskRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的任务",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if taskID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "task", taskID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
 func init() {
 	taskListCmd.Flags().StringVar(&taskProjectID, "project", "", "所属项目 ID 或 执行/迭代 ID (必填)")
+	taskListCmd.Flags().StringVar(&taskAssignedTo, "assigned-to", "", "指派给的用户账号筛选")
 	taskListCmd.Flags().StringVar(&taskStatus, "status", "all", "任务状态过滤: all (全部), undone/unclosed (未完成), wait (未开始), doing (进行中), done (已完成), pause (已暂停), cancel (已取消), closed (已关闭), needconfirm (需求变动待确认)")
 	taskListCmd.Flags().StringVar(&taskOrderBy, "order-by", "id_desc", "排序字段 (例如: id_desc, id_asc, pri_asc, deadline_asc, estimate_desc, consumed_desc)")
 	addPaginationFlags(taskListCmd)
@@ -568,10 +713,13 @@ func init() {
 	taskParamsCmd.Flags().StringVar(&taskProjectID, "project", "", "所属项目 / 执行 ID (必填)")
 
 	taskCreateCmd.Flags().StringVar(&taskProjectID, "project", "", "所属项目 / 执行 ID (必填)")
+	taskCreateCmd.Flags().StringVar(&taskExecutionID, "execution", "", "所属执行/迭代 ID (若与 --project 相同可省略)")
+	taskCreateCmd.Flags().StringVar(&taskParentID, "parent", "0", "所属父任务 ID")
 	taskCreateCmd.Flags().StringVar(&taskName, "name", "", "任务名称 (必填)")
 	taskCreateCmd.Flags().StringVar(&taskType, "type", "devel", "任务类型 (design: 设计, devel: 开发, test: 测试, study: 研究, discuss: 讨论, ui: 界面, affair: 事务, misc: 其他)")
 	taskCreateCmd.Flags().StringVar(&taskPri, "pri", "3", "任务优先级 (1=最高, 2=高, 3=中, 4=低)")
 	taskCreateCmd.Flags().StringVar(&taskEstimate, "estimate", "", "预计工时 (例如: 4.5)")
+	taskCreateCmd.Flags().StringVar(&taskLeft, "left", "", "预计剩余工时 (若不提供，默认自动同步为 estimate 的值)")
 	taskCreateCmd.Flags().StringVar(&taskAssignedTo, "assigned-to", "", "指派给的用户账号")
 	taskCreateCmd.Flags().StringVar(&taskDesc, "desc", "", "任务详细描述说明")
 	taskCreateCmd.Flags().StringVar(&taskModuleID, "module", "0", "所属模块 ID")
@@ -582,6 +730,9 @@ func init() {
 	taskCreateCmd.Flags().StringVar(&taskEstStarted, "est-started", "", "预计开始日期 (格式: YYYY-MM-DD)")
 
 	taskEditCmd.Flags().StringVar(&taskID, "id", "", "要修改的任务 ID (必填)")
+	taskEditCmd.Flags().StringVar(&taskProjectID, "project", "", "所属项目 ID")
+	taskEditCmd.Flags().StringVar(&taskExecutionID, "execution", "", "所属执行/迭代 ID")
+	taskEditCmd.Flags().StringVar(&taskParentID, "parent", "", "所属父任务 ID")
 	taskEditCmd.Flags().StringVar(&taskName, "name", "", "任务名称")
 	taskEditCmd.Flags().StringVar(&taskType, "type", "", "任务类型")
 	taskEditCmd.Flags().StringVar(&taskPri, "pri", "", "任务优先级 (1=最高, 2=高, 3=中, 4=低)")
@@ -639,6 +790,8 @@ func init() {
 	taskDeleteCmd.Flags().StringVar(&taskID, "id", "", "要删除的任务 ID (必填)")
 	taskDeleteCmd.Flags().StringVar(&taskProjectID, "project", "0", "所属项目 ID 或 执行/迭代 ID")
 
+	taskRestoreCmd.Flags().StringVar(&taskID, "id", "", "要恢复的任务 ID (必填)")
+
 	taskCmd.AddCommand(taskListCmd)
 	taskCmd.AddCommand(taskViewCmd)
 	taskCmd.AddCommand(taskParamsCmd)
@@ -654,4 +807,5 @@ func init() {
 	taskCmd.AddCommand(taskActivateCmd)
 	taskCmd.AddCommand(taskAssignCmd)
 	taskCmd.AddCommand(taskDeleteCmd)
+	taskCmd.AddCommand(taskRestoreCmd)
 }

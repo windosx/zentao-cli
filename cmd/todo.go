@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ var todoListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "查询个人待办列表",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -69,7 +68,7 @@ var todoViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -90,7 +89,7 @@ var todoCreateCmd = &cobra.Command{
 			return fmt.Errorf("--name 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -139,7 +138,7 @@ var todoEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -192,7 +191,7 @@ var todoStartCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -213,7 +212,7 @@ var todoFinishCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -234,7 +233,7 @@ var todoCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -255,7 +254,7 @@ var todoActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -279,7 +278,7 @@ var todoAssignCmd = &cobra.Command{
 			return fmt.Errorf("--assigned-to 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -301,12 +300,33 @@ var todoDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.TodoDelete(ctx, todoID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var todoRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的待办事项",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if todoID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "todo", todoID)
 		if err != nil {
 			return err
 		}
@@ -353,6 +373,7 @@ func init() {
 	todoAssignCmd.Flags().StringVar(&todoAssignedTo, "assigned-to", "", "指派给的用户账号 (必填)")
 
 	todoDeleteCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
+	todoRestoreCmd.Flags().StringVar(&todoID, "id", "", "待办 ID (必填)")
 
 	todoCmd.AddCommand(todoListCmd)
 	todoCmd.AddCommand(todoViewCmd)
@@ -364,4 +385,5 @@ func init() {
 	todoCmd.AddCommand(todoActivateCmd)
 	todoCmd.AddCommand(todoAssignCmd)
 	todoCmd.AddCommand(todoDeleteCmd)
+	todoCmd.AddCommand(todoRestoreCmd)
 }

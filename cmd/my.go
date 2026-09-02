@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 	"github.com/windosx/zentao-cli/pkg/zentao"
 )
@@ -31,7 +29,7 @@ var myTaskCmd = &cobra.Command{
 	Use:   "task",
 	Short: "查看我的任务列表（支持指派给我、我创建、已完成、未完成等筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -59,7 +57,7 @@ var myBugCmd = &cobra.Command{
 	Use:   "bug",
 	Short: "查看我的缺陷 (Bug) 列表（支持指派给我、我创建、我解决等筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -87,7 +85,7 @@ var myTodoCmd = &cobra.Command{
 	Use:   "todo",
 	Short: "查看我的日程待办列表（支持按周期与状态筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -115,7 +113,7 @@ var myStoryCmd = &cobra.Command{
 	Use:   "story",
 	Short: "查看我的需求 / 故事列表（支持指派给我、我创建、我评审等筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -143,7 +141,7 @@ var myProjectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "查看我参与的项目列表（支持进行中、未开始、已挂起、已关闭等筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -171,7 +169,7 @@ var myDynamicCmd = &cobra.Command{
 	Use:   "dynamic",
 	Short: "查看我的最新动态 / 活动流",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}

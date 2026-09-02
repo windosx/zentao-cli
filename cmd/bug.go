@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -53,7 +52,7 @@ var bugListCmd = &cobra.Command{
 			return fmt.Errorf("--product 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -88,7 +87,7 @@ var bugViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -109,7 +108,7 @@ var bugParamsCmd = &cobra.Command{
 			return fmt.Errorf("--product 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -138,7 +137,7 @@ var bugCreateCmd = &cobra.Command{
 			return fmt.Errorf("--title 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -217,7 +216,7 @@ var bugEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -299,7 +298,7 @@ var bugResolveParamsCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -323,7 +322,7 @@ var bugResolveCmd = &cobra.Command{
 			return fmt.Errorf("--resolution 是必填参数 (bydesign: 设计如此, duplicate: 重复Bug, external: 外部原因, fixed: 已解决, notrepro: 无法重现, postponed: 延期处理, willnotfix: 不予解决, tostory: 转为需求)")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -366,7 +365,7 @@ var bugCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -392,7 +391,7 @@ var bugActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -427,7 +426,7 @@ var bugAssignCmd = &cobra.Command{
 			return fmt.Errorf("--assigned-to 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -455,7 +454,7 @@ var bugConfirmCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -487,12 +486,33 @@ var bugDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.BugDelete(ctx, bugID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var bugRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的 Bug",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if bugID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "bug", bugID)
 		if err != nil {
 			return err
 		}
@@ -580,6 +600,7 @@ func init() {
 	bugConfirmCmd.Flags().StringVar(&bugComment, "comment", "", "确认备注说明")
 
 	bugDeleteCmd.Flags().StringVar(&bugID, "id", "", "要删除的 Bug ID (必填)")
+	bugRestoreCmd.Flags().StringVar(&bugID, "id", "", "要恢复的 Bug ID (必填)")
 
 	bugCmd.AddCommand(bugListCmd)
 	bugCmd.AddCommand(bugViewCmd)
@@ -593,4 +614,5 @@ func init() {
 	bugCmd.AddCommand(bugAssignCmd)
 	bugCmd.AddCommand(bugConfirmCmd)
 	bugCmd.AddCommand(bugDeleteCmd)
+	bugCmd.AddCommand(bugRestoreCmd)
 }

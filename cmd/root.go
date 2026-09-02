@@ -45,19 +45,21 @@ var RootCmd = &cobra.Command{
 		// Create ZenTao Client with active configuration
 		zcfg := opts.ToZentaoConfig()
 		client = zentao.New(zcfg)
-		// Lazy migration from legacy plain-text profiles.json to keyring
+
+		// Auto-bind active profile credentials and session
+		if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
+			bindProfileToClient(profile)
+		}
+
+		// Load password from keyring if not provided in flags/profile
 		if client.Password == "" && client.BaseURL != "" && client.Account != "" {
 			if pw, err := secret.Get(client.BaseURL, client.Account); err == nil {
 				client.Password = pw
 			}
 		}
+
 		client.OnSessionRefreshed = func(cookie, rand string) {
 			config.UpdateActiveProfileCookie(cookie, rand)
-		}
-
-		// Auto-bind active profile credentials and session
-		if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
-			bindProfileToClient(profile)
 		}
 
 		// Silently auto-sync existing installed SKILL.md to the latest version on binary update
@@ -176,20 +178,26 @@ func ensureClientLoggedIn(ctx context.Context) error {
 		return fmt.Errorf("客户端未初始化")
 	}
 
-	// 1. If client already has a session cookie, try using it (if expired, callRoute will transparently re-login and retry)
+	// 1. Try loading active profile if client fields are empty
+	if client.BaseURL == "" || client.Account == "" || client.Cookie == "" {
+		if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
+			bindProfileToClient(profile)
+		}
+	}
+
+	// 2. Load password from keyring if needed
+	if client.Password == "" && client.BaseURL != "" && client.Account != "" {
+		if pw, err := secret.Get(client.BaseURL, client.Account); err == nil {
+			client.Password = pw
+		}
+	}
+
+	// 3. If client already has a session cookie, try using it (if expired, callRoute will transparently re-login and retry)
 	if client.Cookie != "" {
 		return nil
 	}
 
-	// 2. Try loading active profile
-	if profile, err := config.GetActiveProfile(""); err == nil && profile != nil {
-		bindProfileToClient(profile)
-		if client.Cookie != "" {
-			return nil
-		}
-	}
-
-	// 3. If no cookie but credentials exist, perform transparent login
+	// 4. If no cookie but credentials exist, perform transparent login
 	if client.BaseURL != "" && client.Account != "" && client.Password != "" {
 		return client.Login(ctx)
 	}

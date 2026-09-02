@@ -39,7 +39,7 @@ func TestRootCmd_Help(t *testing.T) {
 	out := buf.String()
 	subcommands := []string{
 		"auth", "my", "todo", "task", "bug", "story",
-		"project", "product", "user", "dept",
+		"project", "product", "user", "dept", "trash",
 		"config", "schema", "skill", "version",
 	}
 	for _, sub := range subcommands {
@@ -104,10 +104,11 @@ func TestTransparentAutoRelogin_WhenSessionExpires(t *testing.T) {
 	}
 
 	// 2. Manually corrupt the cached cookie to simulate server-side session expiration
+	// Note: Password is intentionally empty in Profile to verify Keyring password resolution!
 	_ = config.SaveProfile(config.Profile{
 		URL:        server.URL,
 		Account:    "testuser",
-		Password:   "Test@123456",
+		Password:   "",
 		Cookie:     "zentaosid=stale-session-123",
 		AccessMode: "GET",
 	})

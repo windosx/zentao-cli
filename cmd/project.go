@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -42,7 +41,7 @@ var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "查询项目列表（支持按状态、产品、项目集筛选）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -81,7 +80,7 @@ var projectViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -98,7 +97,7 @@ var projectParamsCmd = &cobra.Command{
 	Use:   "params",
 	Short: "获取创建项目所需的元数据字典（项目集、可用产品列表等）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -123,7 +122,7 @@ var projectCreateCmd = &cobra.Command{
 			return fmt.Errorf("--code 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -197,7 +196,7 @@ var projectEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -277,7 +276,7 @@ var projectStartCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -303,7 +302,7 @@ var projectSuspendCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -329,7 +328,7 @@ var projectActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -355,7 +354,7 @@ var projectCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -381,12 +380,33 @@ var projectDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.ProjectDelete(ctx, projectID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var projectRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的项目",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if projectID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "project", projectID)
 		if err != nil {
 			return err
 		}
@@ -458,6 +478,7 @@ func init() {
 	projectCloseCmd.Flags().StringVar(&projectComment, "comment", "", "关闭备注说明")
 
 	projectDeleteCmd.Flags().StringVar(&projectID, "id", "", "要删除的项目 ID (必填)")
+	projectRestoreCmd.Flags().StringVar(&projectID, "id", "", "要恢复的项目 ID (必填)")
 
 	projectCmd.AddCommand(projectListCmd)
 	projectCmd.AddCommand(projectViewCmd)
@@ -469,4 +490,5 @@ func init() {
 	projectCmd.AddCommand(projectActivateCmd)
 	projectCmd.AddCommand(projectCloseCmd)
 	projectCmd.AddCommand(projectDeleteCmd)
+	projectCmd.AddCommand(projectRestoreCmd)
 }

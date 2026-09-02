@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -47,7 +46,7 @@ var storyListCmd = &cobra.Command{
 			return fmt.Errorf("--product 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -85,7 +84,7 @@ var storyViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -106,7 +105,7 @@ var storyParamsCmd = &cobra.Command{
 			return fmt.Errorf("--product 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -135,7 +134,7 @@ var storyCreateCmd = &cobra.Command{
 			return fmt.Errorf("--title 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -197,7 +196,7 @@ var storyEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -268,7 +267,7 @@ var storyReviewCmd = &cobra.Command{
 			return fmt.Errorf("--result 是必填参数 (pass: 确认通过, revert: 撤销变更, reject: 拒绝, clarify: 有待明确)")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -302,7 +301,7 @@ var storyChangeCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -349,7 +348,7 @@ var storyCloseCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -378,7 +377,7 @@ var storyActivateCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -410,7 +409,7 @@ var storyAssignCmd = &cobra.Command{
 			return fmt.Errorf("--assigned-to 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -438,12 +437,33 @@ var storyDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.StoryDelete(ctx, storyID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var storyRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的需求",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if storyID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "story", storyID)
 		if err != nil {
 			return err
 		}
@@ -525,6 +545,7 @@ func init() {
 	storyAssignCmd.Flags().StringVar(&storyComment, "comment", "", "指派备注说明")
 
 	storyDeleteCmd.Flags().StringVar(&storyID, "id", "", "要删除的需求 ID (必填)")
+	storyRestoreCmd.Flags().StringVar(&storyID, "id", "", "要恢复的需求 ID (必填)")
 
 	storyCmd.AddCommand(storyListCmd)
 	storyCmd.AddCommand(storyViewCmd)
@@ -537,4 +558,5 @@ func init() {
 	storyCmd.AddCommand(storyActivateCmd)
 	storyCmd.AddCommand(storyAssignCmd)
 	storyCmd.AddCommand(storyDeleteCmd)
+	storyCmd.AddCommand(storyRestoreCmd)
 }

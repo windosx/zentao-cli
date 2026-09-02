@@ -157,3 +157,57 @@ func TestTruncateRuneSafe(t *testing.T) {
 		t.Errorf("truncate = %q", got)
 	}
 }
+
+func TestExtractErrorMessage_JSAlert(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "window.alert single quote",
+			input:    "<script>window.alert('『预计剩余』应当是数字，可以是小数。')</script>",
+			expected: "『预计剩余』应当是数字，可以是小数。",
+		},
+		{
+			name:     "alert double quote",
+			input:    `<script>alert("预计剩余工时不能为空")</script>`,
+			expected: "预计剩余工时不能为空",
+		},
+		{
+			name:     "alert with whitespace and newline",
+			input:    "<script>\n  alert('表单校验失败：\\n1. 名称必填\\n2. 预计剩余必填');\n</script>",
+			expected: "表单校验失败： 1. 名称必填 2. 预计剩余必填",
+		},
+		{
+			name:     "plain window.alert",
+			input:    "window.alert('操作失败');",
+			expected: "操作失败",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractErrorMessage([]byte(tt.input))
+			if got != tt.expected {
+				t.Errorf("extractErrorMessage() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestUnwrapResponse_DoubleEncodedLoginExpired(t *testing.T) {
+	// Nested JSON in data containing loginExpired and title
+	nestedExpired := []byte(`{"status":"success","data":"{\"title\":\"用户登录\",\"loginExpired\":true,\"keepLogin\":false}"}`)
+	_, err := unwrapResponse(nestedExpired)
+	if err == nil || !IsAuthError(err) {
+		t.Fatalf("expected IsAuthError=true for double-encoded loginExpired, got: %v", err)
+	}
+
+	// SQLSTATE unauthenticated error
+	sqlstateBody := []byte(`<html><body><p>SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'openedBy' cannot be null</p></body></html>`)
+	_, err = unwrapResponse(sqlstateBody)
+	if err == nil || !IsAuthError(err) {
+		t.Fatalf("expected IsAuthError=true for SQLSTATE openedBy null, got: %v", err)
+	}
+}

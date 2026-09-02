@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -34,7 +33,7 @@ var userListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "查询用户列表",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -69,7 +68,7 @@ var userViewCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -86,7 +85,7 @@ var userParamsCmd = &cobra.Command{
 	Use:   "params",
 	Short: "获取创建用户所需的元数据字典（部门、用户组、角色等）",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -114,7 +113,7 @@ var userCreateCmd = &cobra.Command{
 			return fmt.Errorf("--realname 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -167,7 +166,7 @@ var userEditCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
@@ -214,12 +213,33 @@ var userDeleteCmd = &cobra.Command{
 			return fmt.Errorf("--id 是必填参数")
 		}
 
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
 
 		data, err := client.UserDelete(ctx, userID)
+		if err != nil {
+			return err
+		}
+		return printer.Success(data)
+	},
+}
+
+var userRestoreCmd = &cobra.Command{
+	Use:   "restore",
+	Short: "从回收站中恢复已删除的用户",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if userID == "" {
+			return fmt.Errorf("--id 是必填参数")
+		}
+
+		ctx := cmd.Context()
+		if err := ensureClientLoggedIn(ctx); err != nil {
+			return err
+		}
+
+		data, err := client.RestoreObject(ctx, "user", userID)
 		if err != nil {
 			return err
 		}
@@ -259,6 +279,7 @@ func init() {
 	userEditCmd.Flags().StringVar(&userDeptID, "dept", "", "部门 ID")
 
 	userDeleteCmd.Flags().StringVar(&userID, "id", "", "要删除的用户 ID (必填)")
+	userRestoreCmd.Flags().StringVar(&userID, "id", "", "要恢复的用户 ID (必填)")
 
 	userCmd.AddCommand(userListCmd)
 	userCmd.AddCommand(userViewCmd)
@@ -266,4 +287,5 @@ func init() {
 	userCmd.AddCommand(userCreateCmd)
 	userCmd.AddCommand(userEditCmd)
 	userCmd.AddCommand(userDeleteCmd)
+	userCmd.AddCommand(userRestoreCmd)
 }

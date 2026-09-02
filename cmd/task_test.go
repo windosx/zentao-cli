@@ -14,6 +14,8 @@ import (
 // defaults by reading DefValue from the relevant cobra commands.
 func resetTaskFlags() {
 	taskProjectID = ""
+	taskExecutionID = ""
+	taskParentID = ""
 	taskID = ""
 	taskStatus = taskListCmd.Flags().Lookup("status").DefValue
 	taskOrderBy = taskListCmd.Flags().Lookup("order-by").DefValue
@@ -155,5 +157,93 @@ func TestTaskCommands_ValidationAndExecution(t *testing.T) {
 				t.Fatalf("expected ok=true response for %v, got: %s", tt.args, buf.String())
 			}
 		})
+	}
+}
+
+func TestTaskCreate_LeftFieldAndAlertError(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("ZENTAO_NO_KEYRING", "1")
+
+	var lastReceivedLeft string
+	var lastReceivedEstimate string
+	var returnAlert bool
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m := r.URL.Query().Get("m")
+		f := r.URL.Query().Get("f")
+
+		switch {
+		case m == "api" && f == "getSessionID":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   `{"sessionName":"zentaosid","sessionID":"task-sess-2","rand":"task-rand-2"}`,
+			})
+		case m == "user" && f == "login":
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"user":   map[string]any{"id": "1", "account": "admin"},
+			})
+		case m == "task" && f == "create" && r.Method == http.MethodPost:
+			_ = r.ParseForm()
+			lastReceivedLeft = r.FormValue("left")
+			lastReceivedEstimate = r.FormValue("estimate")
+
+			if returnAlert {
+				w.Write([]byte("<script>window.alert('『预计剩余』应当是数字，可以是小数。')</script>"))
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "success", "message": "created"})
+		default:
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": `{}`})
+		}
+	}))
+	defer server.Close()
+
+	// 1. Login
+	flagOpts = config.Options{}
+	buf := new(bytes.Buffer)
+	RootCmd.SetOut(buf)
+	RootCmd.SetErr(buf)
+	RootCmd.SetArgs([]string{"auth", "login", "-u", server.URL, "-a", "admin", "-p", "123456", "-o", "json"})
+	if err := RootCmd.Execute(); err != nil {
+		t.Fatalf("auth login failed: %v", err)
+	}
+
+	// 2. Create task with explicit --estimate only -> left should default to estimate value
+	resetTaskFlags()
+	buf.Reset()
+	flagOpts = config.Options{}
+	RootCmd.SetArgs([]string{"task", "create", "--project", "101", "--name", "Auto Left Task", "--estimate", "3.5", "-o", "json"})
+	if err := RootCmd.Execute(); err != nil {
+		t.Fatalf("task create with estimate failed: %v", err)
+	}
+	if lastReceivedEstimate != "3.5" || lastReceivedLeft != "3.5" {
+		t.Errorf("expected estimate=3.5 and left=3.5, got estimate=%s, left=%s", lastReceivedEstimate, lastReceivedLeft)
+	}
+
+	// 3. Create task with explicit --left override
+	resetTaskFlags()
+	buf.Reset()
+	flagOpts = config.Options{}
+	RootCmd.SetArgs([]string{"task", "create", "--project", "101", "--name", "Custom Left Task", "--estimate", "5.0", "--left", "2.5", "-o", "json"})
+	if err := RootCmd.Execute(); err != nil {
+		t.Fatalf("task create with explicit left failed: %v", err)
+	}
+	if lastReceivedEstimate != "5.0" || lastReceivedLeft != "2.5" {
+		t.Errorf("expected estimate=5.0 and left=2.5, got estimate=%s, left=%s", lastReceivedEstimate, lastReceivedLeft)
+	}
+
+	// 4. Server returns JS alert -> CLI should return cleanly parsed error message without hanging
+	returnAlert = true
+	resetTaskFlags()
+	buf.Reset()
+	flagOpts = config.Options{}
+	RootCmd.SetArgs([]string{"task", "create", "--project", "101", "--name", "Alert Task", "-o", "json"})
+	err := RootCmd.Execute()
+	if err == nil {
+		t.Fatalf("expected error on alert response, got nil")
+	}
+	if !bytes.Contains([]byte(err.Error()), []byte("『预计剩余』应当是数字，可以是小数。")) {
+		t.Errorf("expected error message to contain parsed alert, got: %v", err)
 	}
 }

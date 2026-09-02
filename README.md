@@ -315,6 +315,7 @@ zentao user view --id 12 -o json                             # 查看用户详�
 zentao user params --dept 1                                  # 获取创建用户所需的部门树与角色元数据
 zentao user create --username "tom" --user-password "pwd" --realname "Tom"
 zentao user edit --id 12 --realname "Thomas"                 # 修改用户信息
+zentao user restore --id 12                                  # 恢复已删除的用户
 zentao dept list -o table                                    # 查询部门层级结构
 zentao dept create --parent 1 --name "前端组"                # 添加子部门
 zentao dept edit --id 3 --name "移动端研发组"                # 修改部门
@@ -322,7 +323,21 @@ zentao dept edit --id 3 --name "移动端研发组"                # 修改部�
 
 ---
 
-### 5. 认证与多环境管理 (`auth`)
+### 5. 系统回收站管理 (`trash`)
+
+```bash
+zentao trash list -o table                                   # 查询回收站中全部已删除对象
+zentao trash list --type task -o table                       # 仅查询已删除的任务
+zentao trash restore --action-id 36423                       # 按删除动作 ID 恢复对象
+zentao trash hide-one --action-id 36423                      # 在回收站中隐藏指定的删除记录
+zentao trash hide-all                                        # 清空/隐藏回收站中的全部删除记录
+```
+
+> 💡 **提示**：除了 `zentao trash` 全局命令外，各业务模块均支持快捷恢复：`zentao task/bug/story/project/product/user/todo restore --id <ID>`。
+
+---
+
+### 6. 认证与多环境管理 (`auth`)
 
 ```bash
 zentao auth login --url <url> --account <acc> --password <pwd> [--name prod]
@@ -334,7 +349,7 @@ zentao auth logout                                           # 注销并清除�
 
 ---
 
-### 6. 配置文件管理 (`config`)
+### 7. 配置文件管理 (`config`)
 
 ```bash
 zentao config init --path .zentao.yaml                       # 初始化当前目录配置文件模板
@@ -343,7 +358,7 @@ zentao config show -o table                                  # 查看当前生�
 
 ---
 
-### 7. 版本与兼容性查看 (`version`)
+### 8. 版本与兼容性查看 (`version`)
 
 本项目遵循 **SemVer 2.0 构建元数据规范 (Build Metadata)**，完整版本格式为 `vX.Y.Z+<zentao_version>`（例如 `v1.0.8+21.7`）：
 - `vX.Y.Z`：CLI 与 Go SDK 自身的语义化迭代版本；

@@ -494,17 +494,24 @@ func (c *Client) TaskCreateParams(ctx context.Context, projectID string) (json.R
 	return c.call(ctx, http.MethodGet, "task", "create", params)
 }
 
-// TaskCreate creates a task (POST m=task&f=create&project=<id>). Common
+// TaskCreate creates a task (POST m=task&f=create&executionID=<id>). Common
 // fields: name, type, pri, estimate, assignedTo, module, story, desc, keywords, mailto, deadline, estStarted.
 func (c *Client) TaskCreate(ctx context.Context, params Params) (json.RawMessage, error) {
-	project := params.Get("project")
+	project := params.Get("executionID")
 	if project == "" {
 		project = params.Get("execution")
 	}
 	if project == "" {
+		project = params.Get("project")
+	}
+	if project == "" {
 		return nil, fmt.Errorf("%w: task create: --project is required", ErrValidation)
 	}
-	return c.callRoute(ctx, http.MethodPost, "task", "create", routeParam{Key: "project", Value: project}, params)
+	// Pass execution in body as well for ZenTao 21.7 form processor
+	if params.Get("execution") == "" {
+		params.Set("execution", project)
+	}
+	return c.callRoute(ctx, http.MethodPost, "task", "create", routeParam{Key: "executionID", Value: project}, params)
 }
 
 // TaskView returns details of a task (GET m=task&f=view&taskID=<id>).
@@ -1224,6 +1231,80 @@ func (c *Client) TodoDelete(ctx context.Context, todoID string) (json.RawMessage
 		"confirm": {"yes"},
 	}
 	return c.call(ctx, http.MethodGet, "todo", "delete", params)
+}
+
+// ---- Trash & Recycle Bin (Action Module) ----
+
+// TrashList queries items in the recycle bin (m=action&f=trash).
+func (c *Client) TrashList(ctx context.Context, params Params) (json.RawMessage, error) {
+	defaults := Params{
+		"type":       {"all"},
+		"orderBy":    {OrderIDDesc},
+		"recTotal":   {"999999"},
+		"recPerPage": {"999999"},
+	}
+	return c.call(ctx, http.MethodGet, "action", "trash", mergeDefaults(params, defaults))
+}
+
+// TrashRestore restores a deleted object from the recycle bin by its action ID (m=action&f=undelete&actionID=<id>).
+func (c *Client) TrashRestore(ctx context.Context, actionID string) (json.RawMessage, error) {
+	if actionID == "" {
+		return nil, fmt.Errorf("%w: trash restore: actionID is required", ErrValidation)
+	}
+	params := Params{"actionID": {actionID}}
+	return c.call(ctx, http.MethodGet, "action", "undelete", params)
+}
+
+// TrashHideOne hides an item in the recycle bin by action ID (m=action&f=hideOne&actionID=<id>).
+func (c *Client) TrashHideOne(ctx context.Context, actionID string) (json.RawMessage, error) {
+	if actionID == "" {
+		return nil, fmt.Errorf("%w: trash hide-one: actionID is required", ErrValidation)
+	}
+	params := Params{"actionID": {actionID}}
+	return c.call(ctx, http.MethodGet, "action", "hideOne", params)
+}
+
+// TrashHideAll hides all items in the recycle bin (m=action&f=hideAll).
+func (c *Client) TrashHideAll(ctx context.Context) (json.RawMessage, error) {
+	return c.call(ctx, http.MethodGet, "action", "hideAll", Params{})
+}
+
+// RestoreObject restores a deleted object of a given type and ID by locating its deletion action in the trash.
+func (c *Client) RestoreObject(ctx context.Context, objectType, objectID string) (json.RawMessage, error) {
+	if objectType == "" || objectID == "" {
+		return nil, fmt.Errorf("%w: restore object: objectType and objectID are required", ErrValidation)
+	}
+
+	trashData, err := c.TrashList(ctx, Params{"type": {objectType}})
+	if err != nil {
+		return nil, fmt.Errorf("fetch trash list: %w", err)
+	}
+
+	var resp struct {
+		Trashes []struct {
+			ID         any    `json:"id"`
+			ObjectType string `json:"objectType"`
+			ObjectID   any    `json:"objectID"`
+		} `json:"trashes"`
+	}
+	if err := json.Unmarshal(trashData, &resp); err != nil {
+		return nil, fmt.Errorf("parse trash list: %w", err)
+	}
+
+	var matchedActionID string
+	for _, t := range resp.Trashes {
+		tObjID := fmt.Sprint(t.ObjectID)
+		if strings.EqualFold(t.ObjectType, objectType) && tObjID == objectID {
+			matchedActionID = fmt.Sprint(t.ID)
+			break
+		}
+	}
+
+	if matchedActionID == "" {
+		return nil, fmt.Errorf("object %s #%s not found in trash (it may already be restored or permanently purged)", objectType, objectID)
+	}
+
+	return c.TrashRestore(ctx, matchedActionID)
 }
 
 // ---- helpers ----

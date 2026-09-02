@@ -95,36 +95,40 @@ func (c *Client) do(ctx context.Context, method, module, f string, route routePa
 // When constructing GET query strings, parameters matching these lists are placed FIRST in exact positional order.
 // NOTE: Checked against ZenTao 21.7 source code in module/*/control.php.
 var MethodPositionalOrder = map[string][]string{
-	"my/todo":        {"type", "account", "status", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/task":        {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/bug":         {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/story":       {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/project":     {"status", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/execution":   {"type", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"my/dynamic":     {"type", "recTotal", "date", "direction"},
-	"todo/delete":    {"todoID", "confirm"},
-	"task/delete":    {"projectID", "taskID", "confirm"},
-	"bug/delete":     {"bugID", "confirm"},
-	"story/delete":   {"storyID", "confirm"},
-	"project/delete": {"projectID", "confirm"},
-	"product/delete": {"productID", "confirm"},
-	"user/delete":    {"userID", "confirm"},
-	"dept/delete":    {"deptID", "confirm"},
-	"task/view":      {"taskID"},
-	"bug/view":       {"bugID"},
-	"story/view":     {"storyID"},
-	"project/view":   {"projectID"},
-	"product/view":   {"productID"},
-	"todo/view":      {"todoID"},
-	"user/view":      {"userID"},
-	"bug/browse":     {"productID", "branch", "browseType", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"project/browse": {"programID", "browseType", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"project/task":   {"projectID", "status", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"execution/task": {"executionID", "status", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"product/all":    {"browseType", "orderBy", "param", "recTotal", "recPerPage", "pageID", "programID"},
-	"product/browse": {"productID", "branch", "browseType", "param", "storyType", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"company/browse": {"browseType", "param", "type", "orderBy", "recTotal", "recPerPage", "pageID"},
-	"dept/browse":    {"deptID"},
+	"my/todo":         {"type", "account", "status", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/task":         {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/bug":          {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/story":        {"type", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/project":      {"status", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/execution":    {"type", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"my/dynamic":      {"type", "recTotal", "date", "direction"},
+	"todo/delete":     {"todoID", "confirm"},
+	"task/delete":     {"projectID", "taskID", "confirm"},
+	"bug/delete":      {"bugID", "confirm"},
+	"story/delete":    {"storyID", "confirm"},
+	"project/delete":  {"projectID", "confirm"},
+	"product/delete":  {"productID", "confirm"},
+	"user/delete":     {"userID", "confirm"},
+	"dept/delete":     {"deptID", "confirm"},
+	"action/trash":    {"type", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"action/undelete": {"actionID"},
+	"action/hideOne":  {"actionID"},
+	"action/hideAll":  {},
+	"task/view":       {"taskID"},
+	"bug/view":        {"bugID"},
+	"story/view":      {"storyID"},
+	"project/view":    {"projectID"},
+	"product/view":    {"productID"},
+	"todo/view":       {"todoID"},
+	"user/view":       {"userID"},
+	"bug/browse":      {"productID", "branch", "browseType", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"project/browse":  {"programID", "browseType", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"project/task":    {"projectID", "status", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"execution/task":  {"executionID", "status", "param", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"product/all":     {"browseType", "orderBy", "param", "recTotal", "recPerPage", "pageID", "programID"},
+	"product/browse":  {"productID", "branch", "browseType", "param", "storyType", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"company/browse":  {"browseType", "param", "type", "orderBy", "recTotal", "recPerPage", "pageID"},
+	"dept/browse":     {"deptID"},
 }
 
 // buildURL produces the request URL:
@@ -225,10 +229,18 @@ func unwrapResponse(body []byte) (json.RawMessage, error) {
 		if strings.Trim(string(body), `"`) == "success" {
 			return json.RawMessage(`{}`), nil
 		}
-		return nil, apiError(extractErrorMessage(body))
+		errMsg := extractErrorMessage(body)
+		if isUnauthenticatedError(errMsg) {
+			return nil, authError(errMsg)
+		}
+		return nil, apiError(errMsg)
 	}
 
 	if isLoginPage(env) {
+		return nil, authError("session expired or login required (redirected to user login)")
+	}
+
+	if len(env.Data) > 0 && innerIsLoginPage(env.Data) {
 		return nil, authError("session expired or login required (redirected to user login)")
 	}
 
@@ -237,7 +249,11 @@ func unwrapResponse(body []byte) (json.RawMessage, error) {
 	}
 
 	if isFailureEnv(env) {
-		return nil, apiError(extractFailMessage(env))
+		errMsg := extractFailMessage(env)
+		if isUnauthenticatedError(errMsg) {
+			return nil, authError(errMsg)
+		}
+		return nil, apiError(errMsg)
 	}
 
 	return extractSuccessPayload(env, body)
@@ -297,17 +313,47 @@ func isLoginPage(env rawEnvelope) bool {
 	if env.Title == "用户登录" || env.Title == "User Login" || env.Title == "Login" {
 		return true
 	}
-	if env.LoginExpired != nil || env.KeepLogin != nil {
+	if env.LoginExpired != nil {
+		return true
+	}
+	if env.KeepLogin != nil {
 		return true
 	}
 	if env.Load == "login" || strings.Contains(env.Locate, "user-login") || strings.Contains(env.Load, "user-login") {
 		return true
 	}
 	msg := renderMessage(env.Message)
-	if strings.Contains(msg, "登录已超时") || strings.Contains(msg, "请重新登入") || strings.Contains(msg, "请先登录") {
+	return isUnauthenticatedError(msg)
+}
+
+func innerIsLoginPage(data json.RawMessage) bool {
+	payload, err := decodeData(data)
+	if err != nil {
+		return false
+	}
+	var inner rawEnvelope
+	if err := json.Unmarshal(payload, &inner); err == nil {
+		if isLoginPage(inner) {
+			return true
+		}
+	}
+	s := string(payload)
+	if strings.Contains(s, `"loginExpired":true`) || strings.Contains(s, `"loginExpired":"true"`) ||
+		strings.Contains(s, `"title":"用户登录"`) || strings.Contains(s, `"title":"User Login"`) {
 		return true
 	}
 	return false
+}
+
+func isUnauthenticatedError(msg string) bool {
+	lower := strings.ToLower(msg)
+	return strings.Contains(msg, "登录已超时") ||
+		strings.Contains(msg, "请重新登入") ||
+		strings.Contains(msg, "请先登录") ||
+		strings.Contains(lower, "login required") ||
+		strings.Contains(lower, "session expired") ||
+		strings.Contains(lower, "loginexpired") ||
+		(strings.Contains(msg, "SQLSTATE[23000]") && strings.Contains(msg, "openedBy"))
 }
 
 // decodeData unwraps the double-encoded "data" field: when raw is a quoted
@@ -380,7 +426,10 @@ func truncate(s string, n int) string {
 	return string(runes[:n]) + "..."
 }
 
-var htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
+var (
+	htmlTagRegex = regexp.MustCompile(`<[^>]*>`)
+	jsAlertRegex = regexp.MustCompile(`(?s)(?:window\.)?alert\s*\(\s*(?:'([^']*)'|"([^"]*)")\s*\)`)
+)
 
 func stripHTML(src string) string {
 	return htmlTagRegex.ReplaceAllString(src, "")
@@ -394,6 +443,21 @@ func extractErrorMessage(body []byte) string {
 		rest := s[idx+len("triggerError('"):]
 		if endIdx := strings.Index(rest, "'"); endIdx != -1 {
 			return rest[:endIdx]
+		}
+	}
+
+	// Extract alert('...') / window.alert('...') content if present
+	if match := jsAlertRegex.FindStringSubmatch(s); len(match) > 2 {
+		msg := match[1]
+		if msg == "" && len(match) > 2 {
+			msg = match[2]
+		}
+		if strings.TrimSpace(msg) != "" {
+			msg = strings.TrimSpace(msg)
+			msg = strings.ReplaceAll(msg, `\n`, "\n")
+			msg = strings.ReplaceAll(msg, `\'`, "'")
+			msg = strings.ReplaceAll(msg, `\"`, "\"")
+			return cleanExtractedMessage(msg)
 		}
 	}
 
@@ -416,6 +480,21 @@ func extractErrorMessage(body []byte) string {
 		return truncate(clean, 300)
 	}
 	return truncate(s, 200)
+}
+
+func cleanExtractedMessage(msg string) string {
+	lines := strings.Split(msg, "\n")
+	var cleaned []string
+	for _, l := range lines {
+		t := strings.TrimSpace(l)
+		if t != "" {
+			cleaned = append(cleaned, t)
+		}
+	}
+	if len(cleaned) == 0 {
+		return msg
+	}
+	return strings.Join(cleaned, " ")
 }
 
 // kindForStatus maps an HTTP status code to an ErrorKind.

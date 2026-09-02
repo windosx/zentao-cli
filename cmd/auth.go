@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -71,7 +70,7 @@ var authLoginCmd = &cobra.Command{
 		}
 
 		loginClient := zentao.New(zcfg)
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := loginClient.Login(ctx); err != nil {
 			return err
 		}
@@ -185,7 +184,7 @@ var authStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "查看当前认证会话状态",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := context.Background()
+		ctx := cmd.Context()
 		if err := ensureClientLoggedIn(ctx); err != nil {
 			return err
 		}
