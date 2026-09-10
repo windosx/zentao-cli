@@ -1,0 +1,93 @@
+name: Choco Republish
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish to Chocolatey (e.g. v1.2.0+21.7)'
+        required: true
+        type: string
+
+jobs:
+  choco-publish:
+    name: Publish Chocolatey Package
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Build nupkg via GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --skip=publish,validate,announce,sbom,homebrew,winget,sign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
+      - name: Push nupkg to Chocolatey
+        shell: pwsh
+        run: |
+          # 1. 在 dist/ 目录中定位 GoReleaser 生成的原始 .nuspec 文件
+          $nuspecFile = Get-ChildItem -Path dist -Filter "*.nuspec" -Recurse | Select-Object -First 1
+          if ($nuspecFile) {
+            Write-Host "==> Normalizing NuGet v2 version in $($nuspecFile.FullName)..."
+            $content = Get-Content $nuspecFile.FullName -Raw
+            # 剥离 SemVer 2.0 的 '+' build metadata，例如将 1.2.0+21.7 转为符合 NuGet v2 规范的 1.2.0
+            $content = $content -replace '<version>([^<+]+)\+[^<]*</version>', '<version>$1</version>'
+            Set-Content -Path $nuspecFile.FullName -Value $content -NoNewline
+
+            # 使用 choco.exe 原生重新打包，确保 ZIP/OPC 格式与清单哈希 100% 正确
+            Write-Host "==> Repacking with choco.exe..."
+            choco pack $nuspecFile.FullName --outputdirectory dist
+          }
+
+          # 2. 找到打包后的标准 .nupkg 文件（优先选取无 '+' 的标准包）
+          $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" | Where-Object { $_.Name -notmatch "\+" } | Select-Object -First 1
+          if (-not $nupkg) {
+            $nupkg = Get-ChildItem -Path dist -Filter "*.nupkg" -Recurse | Select-Object -First 1
+          }
+          if (-not $nupkg) { Write-Error "No .nupkg found in dist/"; exit 1 }
+          Write-Host "==> Target package for upload: $($nupkg.FullName)"
+
+          # 3. 推送到 Chocolatey
+          $maxRetries = 3
+          $success = $false
+          for ($i = 1; $i -le $maxRetries; $i++) {
+            Write-Host "==> Uploading via direct NuGet v2 API with curl.exe (attempt $i/$maxRetries)..."
+            $curlOut = & curl.exe -s -S -X PUT -H "X-NuGet-ApiKey: $($env:CHOCOLATEY_API_KEY)" -F "package=@$($nupkg.FullName)" https://push.chocolatey.org/api/v2/package/ 2>&1
+            Write-Host "Response: $curlOut"
+            if ($curlOut -match "Package has been pushed" -or $curlOut -match "created" -or $curlOut -match "201") {
+              Write-Host "==> Successfully pushed to Chocolatey via NuGet API!"
+              $success = $true
+              break
+            }
+
+            Write-Host "==> Direct API push returned non-success response, trying choco push fallback..."
+            choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+            if ($LASTEXITCODE -eq 0) {
+              $success = $true
+              break
+            }
+
+            if ($i -lt $maxRetries) {
+              Write-Host "==> Push failed (attempt $i/$maxRetries), retrying in 30s..."
+              Start-Sleep -Seconds 30
+            }
+          }
+          if (-not $success) {
+            Write-Error "==> Chocolatey push failed after $maxRetries attempts"
+            exit 1
+          }
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
