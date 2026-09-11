@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.tag }}
+          # 始终 checkout main，模板文件在 main 上，不需要 tag 的源码
 
       - name: Build and push nupkg
         shell: pwsh
