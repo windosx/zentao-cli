@@ -142,3 +142,4 @@ Key Features:
           if (-not $success) { Write-Error "==> Push failed after $maxRetries attempts"; exit 1 }
         env:
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+
