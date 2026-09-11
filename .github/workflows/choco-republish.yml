@@ -25,12 +25,41 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Build nupkg via GoReleaser
+      - name: Download published release artifacts into dist/
+        shell: pwsh
+        run: |
+          # 从 GitHub Release 下载已发布的 zip（Windows amd64/arm64），保证 checksum 与已发布版本一致
+          $tag = "${{ inputs.tag }}"
+          # 剥离 '+' 后的 build metadata，得到 GoReleaser 生成的文件名中的版本号（如 1.2.0+21.7 -> 1.2.0+21.7，保留原样）
+          $version = $tag.TrimStart('v')
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          $assets = @(
+            "zentao-cli-$version-windows-amd64.zip",
+            "zentao-cli-$version-windows-arm64.zip"
+          )
+          foreach ($asset in $assets) {
+            $url = "https://github.com/windosx/zentao-cli/releases/download/$tag/$asset"
+            Write-Host "==> Downloading $url"
+            $dest = "dist/$asset"
+            $ProgressPreference = 'SilentlyContinue'
+            Invoke-WebRequest -Uri $url -OutFile $dest -ErrorAction SilentlyContinue
+            if (Test-Path $dest) {
+              $hash = (Get-FileHash $dest -Algorithm SHA256).Hash.ToLower()
+              Write-Host "    SHA256: $hash"
+            } else {
+              Write-Host "    Not found (skipped): $asset"
+            }
+          }
+
+      - name: Build nupkg via GoReleaser (skip build, use downloaded artifacts)
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: '~> v2'
-          args: release --clean --skip=publish,validate,announce,sbom,homebrew,winget,sign
+          # --skip=build: 跳过重新编译，goreleaser 直接使用 dist/ 中已下载的 zip 计算 checksum
+          # --skip=publish: 不重复上传 GitHub Release
+          args: release --clean=false --skip=build,publish,validate,announce,sbom,homebrew,winget,sign
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
