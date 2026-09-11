@@ -1,0 +1,19 @@
+$ErrorActionPreference = 'Stop'
+$toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$packageArgs = @{
+  packageName    = 'zentao-cli'
+  unzipLocation  = $toolsDir
+  fileType       = 'zip'
+  url64bit       = '{{URL_AMD64}}'
+  checksum64     = '{{CHECKSUM_AMD64}}'
+  checksumType64 = 'sha256'
+  url            = '{{URL_ARM64}}'
+  checksum       = '{{CHECKSUM_ARM64}}'
+  checksumType   = 'sha256'
+}
+Install-ChocolateyZipPackage @packageArgs
+$zentaoExe = Get-ChildItem $toolsDir -Recurse -Filter 'zentao.exe' | Select-Object -First 1
+if ($zentaoExe) {
+  $shimTarget = Join-Path $toolsDir 'zentao.exe'
+  if ($shimTarget -ne $zentaoExe.FullName) { Copy-Item $zentaoExe.FullName $shimTarget -Force }
+}

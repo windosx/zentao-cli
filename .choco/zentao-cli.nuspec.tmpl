@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>zentao-cli</id>
+    <version>{{NUGET_VERSION}}</version>
+    <title>ZenTao CLI</title>
+    <authors>windosx</authors>
+    <owners>windosx</owners>
+    <projectUrl>https://github.com/windosx/zentao-cli</projectUrl>
+    <licenseUrl>https://github.com/windosx/zentao-cli/blob/main/LICENSE</licenseUrl>
+    <projectSourceUrl>https://github.com/windosx/zentao-cli</projectSourceUrl>
+    <docsUrl>https://github.com/windosx/zentao-cli#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/windosx/zentao-cli/issues</bugTrackerUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>ZenTao PMS CLI and Go SDK for AI coding agents and modern developers</summary>
+    <description>ZenTao PMS (ZenTao) CLI tool and Go SDK designed for AI coding agents (Claude Code, ZCode, Cursor, OpenHands) and modern developers.
+
+Key Features:
+- Zero-Auth Persistent Sessions: Single login via system keychain with transparent session auto-refresh when server sessions expire.
+- Full Workbench Support: Complete coverage for personal tasks, assigned bugs, todos, stories, projects, products, and activity dynamics.
+- Agent-Ready Structured Output: Unified JSON envelopes, ASCII tables, and deterministic exit codes.
+- Universal ZenTao Version Compatibility: Direct alignment with ZenTao native web controllers and PHP SDK across legacy and modern versions.
+    </description>
+    <tags>zentao zentao-cli cli sdk project-management agile bug-tracker automation ai-agent</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
