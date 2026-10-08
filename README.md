@@ -55,7 +55,7 @@
   - 你的团队运行在 **ZenTao ≤ 21.7.5（如 18.x, 20.x, 21.0~21.7 等广泛存量部署）** 或未开放 API v2 的私有化实例上；
   - 面向 **AI Agent（Claude Code, Cursor, ZCode 等）长时间自主运行**，需要**零凭据泄漏与会话超时无感自动重登续约（Zero-Auth）**；
   - 深度依赖**个人工作台看板（`my` 指派给我/我创建的）**、**今日待办日历（`todo`）**与**操作活动流（`dynamic`）**；
-  - 追求**单静态二进制开箱即用**（支持 Homebrew Cask, WinGet, Chocolatey 一键安装），无需 Node.js/Bun 运行时；
+  - 追求**单静态二进制开箱即用**（支持一键脚本、Homebrew Cask、Chocolatey 安装），无需 Node.js/Bun 运行时；
   - 需要在 Go 后端微服务或自动化插件中直接引用纯 Go SDK (`pkg/zentao`)。
 
 ---
@@ -64,7 +64,7 @@
 
 ### 1. 唯一登录认证与全自动无感续约（Zero-Auth Subcommands）
 - **仅需登录一次**：账号密码仅在 `zentao auth login` 执行时使用，密码安全托管于系统原生钥匙串（macOS Keychain / Windows Credential Manager / Linux Secret Service；无桌面钥匙串服务时安全回退至权限受限的本地文件），会话凭据保存在本地 Profile 中。
-- **零凭据污染**：所有业务子命令（`my`, `task`, `bug`, `project`, `product`, `todo` 等）**无需也不允许传递账号密码**。
+- **零凭据污染**：所有业务子命令（`my`, `task`, `bug`, `execution`, `project`, `product`, `todo` 等）**无需也不允许传递账号密码**。
 - **透明自动恢复**：当服务端 Session 过期时，底层 HTTP 引擎**全自动触发二次握手重新登录、无缝重放业务请求并同步更新本地缓存**，上层调用完全无感。
 
 ### 2. 独立导出的 Go SDK (`pkg/zentao`)
@@ -83,21 +83,23 @@
 - **确定性退出码**：`0` (成功), `1` (API/业务错误), `2` (未登录), `3` (参数校验错误)。
 
 ### 5. 运行时工具探测与一键技能分发
+- **`npx skills add windosx/zentao-cli`**：全生态通用的 AI Agent 技能一键安装（支持 Claude Code, Cursor, ZCode, OpenHands 等）。
 - **`zentao schema`**：零网络开销动态导出命令与参数的 JSON Schema（包含参数类型、必填项、副作用与风险等级），专供 LLM 进行 Tool Calling 发现。
-- **`zentao skill setup`**：一键将行业标准的 `SKILL.md` 注册分发至 `~/.zcode/skills/`、`~/.agents/skills/`、`~/.claude/skills/` 等各大 Agent 环境。
+- **`zentao skill setup`**：CLI 内置的一键分发命令，将标准的 `SKILL.md` 注册分发至 `~/.zcode/skills/`、`~/.agents/skills/`、`~/.claude/skills/` 等各大 Agent 环境。
 
 ---
 
 ## 📦 安装指南
 
-> **提示**：本项目名为 **`zentao-cli`**，可执行制品名统一为 **`zentao`**（一键脚本/brew/winget/choco 安装后直接使用 `zentao` 命令；`go install` 因 Go 工具链按模块名命名，安装为 `zentao-cli`，可加一条 alias）。
+> **提示**：本项目名为 **`zentao-cli`**，可执行制品名统一为 **`zentao`**（一键脚本/brew/choco 安装后直接使用 `zentao` 命令；`go install` 因 Go 工具链按模块名命名，安装为 `zentao-cli`，可加一条 alias）。
 
-### 1. 一键脚本安装（Linux & macOS 推荐，自动识别架构）
+### 1. 一键脚本安装（推荐：macOS, Linux & Windows Git-Bash 通用）
 ```bash
 curl -fsSL https://raw.githubusercontent.com/windosx/zentao-cli/main/install.sh | bash
 
 # 安装后直接使用：zentao
 ```
+> Windows 用户在 Git-Bash / MSYS2 终端中直接运行上述命令即可自动下载并安装 `zentao.exe`。
 
 ### 2. macOS / Linux (Homebrew)
 ```bash
@@ -107,23 +109,28 @@ brew install windosx/tap/zentao-cli
 # 安装后直接使用：zentao
 ```
 
-### 3. Windows (WinGet / Chocolatey / 手动下载)
+### 3. Windows (Chocolatey / 手动下载)
 ```powershell
-# 方式 A：WinGet (Windows 10/11 官方推荐)
-# 注意：包已提交至 winget-pkgs 官方仓库，首次发布需通过官方审核合并后生效
-winget install windosx.zentao-cli
-
-# 方式 B：Chocolatey（即将上架）
+# 方式 A：Chocolatey
 choco install zentao-cli
 
-# 方式 C：手动下载（立即可用）
+# 方式 B：手动下载
 # 从 GitHub Releases 下载 zentao-cli-<版本>-windows-<架构>.zip，
 # 解压后将 zentao.exe 所在目录加入 PATH 即可使用 zentao 命令
 
 # 安装后直接使用：zentao
 ```
 
-### 4. 通过 Go Install 安装
+### 4. AI Agent 技能一键安装
+```bash
+# 推荐：使用 skills 生态一键添加禅道技能
+npx skills add windosx/zentao-cli
+
+# 或者使用 CLI 内置命令安装
+zentao skill setup
+```
+
+### 5. 通过 Go Install 安装
 ```bash
 # 安装（Go 工具链按模块名生成二进制，安装为 zentao-cli）
 go install github.com/windosx/zentao-cli@latest
@@ -134,7 +141,7 @@ alias zentao=zentao-cli
 ```
 > `go install` 构建的版本信息会从模块元数据自动读取（如 `v1.0.8`），与 GitHub Releases 中 goreleaser 注入的版本保持一致。
 
-### 5. 下载预编译二进制 (GitHub Releases)
+### 6. 下载预编译二进制 (GitHub Releases)
 前往 [GitHub Releases](https://github.com/windosx/zentao-cli/releases) 下载适用于你操作系统的 tar.gz / zip 压缩包，解压后将 `zentao` 移动至系统 `PATH` 目录即可。
 
 ---
@@ -238,9 +245,24 @@ zentao my dynamic --type today -o text                       # 今天的操作�
 
 ---
 
-### 2. 项目、产品、需求与任务管理 (`project` / `product` / `story` / `task`)
+### 2. 迭代、项目、产品、需求与任务管理 (`execution` / `project` / `product` / `story` / `task`)
 
 ```bash
+# 迭代/执行管理 (别名: exec, iter, iteration, sprint)
+zentao execution list --project 109 --status doing -o table  # 查询项目 109 下进行中的迭代/执行
+zentao execution view --id 501 -o json                       # 查看迭代详情
+zentao execution params --project 109                        # 获取创建迭代所需的元数据字典
+zentao execution create --project 109 --name "Sprint 1" --code "s1" --begin "2026-10-01" --end "2026-10-15" # 创建迭代
+zentao execution edit --id 501 --name "Sprint 1 (已调整)"    # 修改迭代
+zentao execution start --id 501                              # 开始迭代
+zentao execution suspend --id 501                            # 挂起迭代
+zentao execution activate --id 501                           # 激活迭代
+zentao execution close --id 501                              # 关闭迭代
+zentao execution delete --id 501                             # 删除迭代
+zentao execution task --id 501 -o table                      # 查看迭代关联的任务
+zentao execution story --id 501 -o table                     # 查看迭代关联的需求
+zentao execution bug --id 501 -o table                       # 查看迭代关联的缺陷
+
 # 产品管理
 zentao product list --status noclosed -o table               # 查询正常运营中的产品
 zentao product view --id 8 -o json                           # 查看产品详情
@@ -253,8 +275,8 @@ zentao product close --id 8                                  # 关闭产品
 zentao project list --status doing -o table                  # 查询进行中的项目
 zentao project view --id 109 -o json                         # 查看项目详情
 zentao project params --program 0                            # 获取创建项目所需的元数据字典
-zentao project create --name "Sprint 2" --code "s2" --begin "2026-09-01" --end "2026-09-15"
-zentao project edit --id 109 --name "Sprint 2 (已调整)"      # 修改项目
+zentao project create --name "Project Alpha" --code "pa" --begin "2026-09-01" --end "2026-12-31"
+zentao project edit --id 109 --name "Project Alpha (已调整)" # 修改项目
 zentao project start --id 109                                # 开始项目
 zentao project suspend --id 109                              # 挂起项目
 zentao project activate --id 109                             # 激活项目

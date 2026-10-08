@@ -778,4 +778,174 @@ func TestClient_AllModules_FullLifecycle(t *testing.T) {
 	if _, err := client.DeptDelete(ctx, "1"); err != nil {
 		t.Fatalf("DeptDelete: %v", err)
 	}
+
+	// Execution
+	if _, err := client.ExecutionView(ctx, "1"); err != nil {
+		t.Fatalf("ExecutionView: %v", err)
+	}
+	if _, err := client.ExecutionEdit(ctx, "1", Params{"name": {"Exec1"}}); err != nil {
+		t.Fatalf("ExecutionEdit: %v", err)
+	}
+	if _, err := client.ExecutionStart(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionStart: %v", err)
+	}
+	if _, err := client.ExecutionSuspend(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionSuspend: %v", err)
+	}
+	if _, err := client.ExecutionActivate(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionActivate: %v", err)
+	}
+	if _, err := client.ExecutionClose(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionClose: %v", err)
+	}
+	if _, err := client.ExecutionDelete(ctx, "1"); err != nil {
+		t.Fatalf("ExecutionDelete: %v", err)
+	}
+	if _, err := client.ExecutionTask(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionTask: %v", err)
+	}
+	if _, err := client.ExecutionStory(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionStory: %v", err)
+	}
+	if _, err := client.ExecutionBug(ctx, "1", Params{}); err != nil {
+		t.Fatalf("ExecutionBug: %v", err)
+	}
+}
+
+func TestClient_ExecutionFlow(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		m := r.URL.Query().Get("m")
+		f := r.URL.Query().Get("f")
+
+		switch {
+		case (m == "project" && f == "execution") || (m == "execution" && f == "all"):
+			resp := map[string]any{
+				"status": "success",
+				"data":   `[{"id":"501","name":"Sprint 1","status":"doing"}]`,
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "view":
+			resp := map[string]any{
+				"status": "success",
+				"data":   `{"execution":{"id":"501","name":"Sprint 1","status":"doing"}}`,
+			}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "create":
+			if r.Method == http.MethodGet {
+				resp := map[string]any{"status": "success", "data": `{"projects":{"1":"Main Project"}}`}
+				_ = json.NewEncoder(w).Encode(resp)
+				return
+			}
+			_ = r.ParseForm()
+			if r.FormValue("name") == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			resp := map[string]any{"result": "success", "message": "created"}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "edit":
+			if r.Method == http.MethodGet {
+				resp := map[string]any{"status": "success", "data": `{"execution":{"id":"501"}}`}
+				_ = json.NewEncoder(w).Encode(resp)
+				return
+			}
+			resp := map[string]any{"result": "success", "message": "updated"}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && (f == "start" || f == "suspend" || f == "activate" || f == "close"):
+			resp := map[string]any{"result": "success", "message": f + " ok"}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "delete":
+			resp := map[string]any{"result": "success", "message": "deleted"}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "task":
+			resp := map[string]any{"status": "success", "data": `[{"id":"101","name":"T1"}]`}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "story":
+			resp := map[string]any{"status": "success", "data": `[{"id":"301","title":"S1"}]`}
+			_ = json.NewEncoder(w).Encode(resp)
+		case m == "execution" && f == "bug":
+			resp := map[string]any{"status": "success", "data": `[{"id":"401","title":"B1"}]`}
+			_ = json.NewEncoder(w).Encode(resp)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := New(Config{URL: server.URL})
+	ctx := context.Background()
+
+	// 1. ExecutionList
+	listData, err := client.ExecutionList(ctx, Params{"project": {"1"}})
+	if err != nil {
+		t.Fatalf("ExecutionList failed: %v", err)
+	}
+	if len(listData) == 0 {
+		t.Fatalf("ExecutionList returned empty data")
+	}
+
+	// 2. ExecutionView
+	viewData, err := client.ExecutionView(ctx, "501")
+	if err != nil {
+		t.Fatalf("ExecutionView failed: %v", err)
+	}
+	if len(viewData) == 0 {
+		t.Fatalf("ExecutionView returned empty data")
+	}
+
+	// 3. ExecutionCreateParams & Create
+	cParams, err := client.ExecutionCreateParams(ctx, "1")
+	if err != nil {
+		t.Fatalf("ExecutionCreateParams failed: %v", err)
+	}
+	if len(cParams) == 0 {
+		t.Fatalf("ExecutionCreateParams returned empty data")
+	}
+
+	_, err = client.ExecutionCreate(ctx, Params{"project": {"1"}, "name": {"Sprint 1"}, "code": {"S1"}})
+	if err != nil {
+		t.Fatalf("ExecutionCreate failed: %v", err)
+	}
+
+	// 4. ExecutionEditParams & Edit
+	eParams, err := client.ExecutionEditParams(ctx, "501")
+	if err != nil {
+		t.Fatalf("ExecutionEditParams failed: %v", err)
+	}
+	if len(eParams) == 0 {
+		t.Fatalf("ExecutionEditParams returned empty data")
+	}
+
+	_, err = client.ExecutionEdit(ctx, "501", Params{"name": {"Sprint 1 Updated"}})
+	if err != nil {
+		t.Fatalf("ExecutionEdit failed: %v", err)
+	}
+
+	// 5. Lifecycle: Start, Suspend, Activate, Close, Delete
+	if _, err := client.ExecutionStart(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionStart failed: %v", err)
+	}
+	if _, err := client.ExecutionSuspend(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionSuspend failed: %v", err)
+	}
+	if _, err := client.ExecutionActivate(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionActivate failed: %v", err)
+	}
+	if _, err := client.ExecutionClose(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionClose failed: %v", err)
+	}
+	if _, err := client.ExecutionDelete(ctx, "501"); err != nil {
+		t.Fatalf("ExecutionDelete failed: %v", err)
+	}
+
+	// 6. Associations: Task, Story, Bug
+	if _, err := client.ExecutionTask(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionTask failed: %v", err)
+	}
+	if _, err := client.ExecutionStory(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionStory failed: %v", err)
+	}
+	if _, err := client.ExecutionBug(ctx, "501", nil); err != nil {
+		t.Fatalf("ExecutionBug failed: %v", err)
+	}
 }

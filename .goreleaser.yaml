@@ -73,44 +73,7 @@ homebrew_casks:
     binaries:
       - zentao
 
-# 2. Windows Package Manager (WinGet)
-winget:
-  - name: zentao-cli
-    package_name: zentao-cli
-    package_identifier: windosx.zentao-cli
-    publisher: windosx
-    publisher_url: "https://github.com/windosx"
-    homepage: "https://github.com/windosx/zentao-cli"
-    license: MIT
-    license_url: "https://github.com/windosx/zentao-cli/blob/main/LICENSE"
-    short_description: "ZenTao PMS CLI and Go SDK for AI agents and modern developers"
-    description: |
-      ZenTao PMS CLI and Go SDK designed for AI Agent tool calling and modern developers.
-      Provides zero-auth persistent sessions and full workbench support.
-    tags:
-      - zentao
-      - zentao-cli
-      - cli
-      - agent
-      - project-management
-    # 每次发版自动推送到 fork（windosx/winget-pkgs）并向 microsoft/winget-pkgs 发 PR
-    # 注意：repository.branch 不显式指定，PR 模式下默认为 zentao-cli-{{ .Version }}（必须与 base 分支不同）
-    skip_upload: false
-    repository:
-      owner: windosx
-      name: winget-pkgs
-      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
-      pull_request:
-        enabled: true
-        base:
-          owner: microsoft
-          name: winget-pkgs
-          branch: master
-    commit_author:
-      name: windosx
-      email: windosx@163.com
-
-# 3. Chocolatey (仅在 windows-latest runner 上执行 choco pack/push)
+# 2. Chocolatey (仅在 windows-latest runner 上执行 choco pack/push)
 # 主 goreleaser job 通过 --skip=chocolatey 跳过此块；
 # choco-publish job 通过 --skip=publish 仅做 pack，再手动 choco push。
 chocolateys:

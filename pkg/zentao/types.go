@@ -58,7 +58,7 @@ type Product struct {
 	Deleted        string `json:"deleted"`
 }
 
-// Project represents a ZenTao project / execution.
+// Project represents a ZenTao project.
 type Project struct {
 	ID            string `json:"id"`
 	IsCat         string `json:"isCat"`
@@ -90,6 +90,61 @@ type Project struct {
 	Whitelist     string `json:"whitelist"`
 	Order         string `json:"order"`
 	Deleted       string `json:"deleted"`
+}
+
+// Execution represents a ZenTao execution / sprint / iteration / stage.
+type Execution struct {
+	ID             string `json:"id"`
+	Project        string `json:"project"`
+	Model          string `json:"model"`
+	Type           string `json:"type"`
+	Lifetime       string `json:"lifetime"`
+	Attribute      string `json:"attribute"`
+	Percent        string `json:"percent"`
+	Milestone      string `json:"milestone"`
+	Output         string `json:"output"`
+	Auth           string `json:"auth"`
+	Parent         string `json:"parent"`
+	Path           string `json:"path"`
+	Grade          string `json:"grade"`
+	Name           string `json:"name"`
+	Code           string `json:"code"`
+	Begin          string `json:"begin"`
+	End            string `json:"end"`
+	RealBegan      string `json:"realBegan"`
+	RealEnd        string `json:"realEnd"`
+	Days           string `json:"days"`
+	Status         string `json:"status"`
+	SubStatus      string `json:"subStatus"`
+	Pri            string `json:"pri"`
+	Desc           string `json:"desc"`
+	Version        string `json:"version"`
+	ParentVersion  string `json:"parentVersion"`
+	PlanDuration   string `json:"planDuration"`
+	RealDuration   string `json:"realDuration"`
+	OpenedBy       string `json:"openedBy"`
+	OpenedDate     string `json:"openedDate"`
+	OpenedVersion  string `json:"openedVersion"`
+	LastEditedBy   string `json:"lastEditedBy"`
+	LastEditedDate string `json:"lastEditedDate"`
+	ClosedBy       string `json:"closedBy"`
+	ClosedDate     string `json:"closedDate"`
+	CanceledBy     string `json:"canceledBy"`
+	CanceledDate   string `json:"canceledDate"`
+	SuspendedDate  string `json:"suspendedDate"`
+	PO             string `json:"PO"`
+	PM             string `json:"PM"`
+	QD             string `json:"QD"`
+	RD             string `json:"RD"`
+	Team           string `json:"team"`
+	ACL            string `json:"acl"`
+	Whitelist      string `json:"whitelist"`
+	Order          string `json:"order"`
+	Deleted        string `json:"deleted"`
+	TotalHours     string `json:"totalHours"`
+	TotalEstimate  string `json:"totalEstimate"`
+	TotalConsumed  string `json:"totalConsumed"`
+	TotalLeft      string `json:"totalLeft"`
 }
 
 // Task represents a ZenTao task.

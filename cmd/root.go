@@ -163,6 +163,7 @@ func init() {
 	RootCmd.AddCommand(bugCmd)
 	RootCmd.AddCommand(storyCmd)
 	RootCmd.AddCommand(projectCmd)
+	RootCmd.AddCommand(executionCmd)
 	RootCmd.AddCommand(productCmd)
 	RootCmd.AddCommand(userCmd)
 	RootCmd.AddCommand(deptCmd)

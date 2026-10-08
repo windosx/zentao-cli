@@ -452,7 +452,7 @@ func extractCollection(data any) ([]map[string]any, bool) {
 	}
 
 	if m, ok := data.(map[string]any); ok {
-		candidateKeys := []string{"projectStats", "projects", "todos", "stories", "bugs", "tasks", "products", "users", "depts", "dynamics", "actions", "sons", "tree", "items"}
+		candidateKeys := []string{"executionStats", "executions", "projectStats", "projects", "todos", "stories", "bugs", "tasks", "products", "users", "depts", "dynamics", "actions", "sons", "tree", "items"}
 		for _, k := range candidateKeys {
 			if v, exists := m[k]; exists {
 				// Special check: in product/all, products is map[string]string {"1": "Name1"}
@@ -532,9 +532,43 @@ func normalizeData(data any) any {
 	if raw, ok := data.(json.RawMessage); ok {
 		var parsed any
 		if err := json.Unmarshal(raw, &parsed); err == nil {
-			return parsed
+			return unwrapSingleEntity(parsed)
 		}
 		return string(raw)
+	}
+	return unwrapSingleEntity(data)
+}
+
+func unwrapSingleEntity(data any) any {
+	m, ok := data.(map[string]any)
+	if !ok {
+		return data
+	}
+
+	// If there is already a top-level collection of items, do not unwrap
+	candidateCollectionKeys := []string{"executionStats", "executions", "projectStats", "projects", "todos", "stories", "bugs", "tasks", "products", "users", "depts", "dynamics", "items"}
+	for _, k := range candidateCollectionKeys {
+		if v, exists := m[k]; exists {
+			if _, isSlice := v.([]any); isSlice {
+				return data
+			}
+			if vMap, isMap := v.(map[string]any); isMap && len(vMap) > 0 {
+				for _, item := range vMap {
+					if _, isItemMap := item.(map[string]any); isItemMap {
+						return data
+					}
+				}
+			}
+		}
+	}
+
+	entityKeys := []string{"execution", "task", "bug", "story", "project", "product", "todo", "user"}
+	for _, k := range entityKeys {
+		if v, exists := m[k]; exists {
+			if vMap, isMap := v.(map[string]any); isMap && vMap["id"] != nil {
+				return vMap
+			}
+		}
 	}
 	return data
 }

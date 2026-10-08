@@ -443,6 +443,281 @@ func (c *Client) ProjectDelete(ctx context.Context, projectID string) (json.RawM
 	return c.call(ctx, http.MethodGet, "project", "delete", params)
 }
 
+// ---- Execution (Iteration / Sprint / Stage) ----
+
+// ExecutionList returns executions / iterations (m=project&f=execution).
+// ZenTao 21.7 signature: project/execution(status='undone', projectID=0, orderBy='order_asc', productID=0, recTotal=0, recPerPage=100, pageID=1)
+func (c *Client) ExecutionList(ctx context.Context, params Params) (json.RawMessage, error) {
+	status := params.Get("status")
+	if status == "" {
+		status = params.Get("browseType")
+	}
+	if status == "" {
+		status = "all"
+	}
+
+	projectID := params.Get("projectID")
+	if projectID == "" {
+		projectID = params.Get("project")
+	}
+	if projectID == "" {
+		projectID = "0"
+	}
+
+	orderBy := params.Get("orderBy")
+	if orderBy == "" {
+		orderBy = "order_asc"
+	}
+
+	productID := params.Get("productID")
+	if productID == "" {
+		productID = params.Get("product")
+	}
+	if productID == "" {
+		productID = "0"
+	}
+
+	defaults := Params{
+		"status":     {status},
+		"projectID":  {projectID},
+		"orderBy":    {orderBy},
+		"productID":  {productID},
+		"recTotal":   {"999999"},
+		"recPerPage": {"999999"},
+	}
+	merged := mergeDefaults(params, defaults)
+	merged.Set("status", status)
+	merged.Set("projectID", projectID)
+	merged.Set("orderBy", orderBy)
+	merged.Set("productID", productID)
+
+	data, err := c.call(ctx, http.MethodGet, "project", "execution", merged)
+	if err == nil {
+		return data, nil
+	}
+
+	// Fallback to my/execution or legacy routes
+	if isModuleOrMethodError(err) {
+		dataMy, errMy := c.call(ctx, http.MethodGet, "my", "execution", merged)
+		if errMy == nil {
+			return dataMy, nil
+		}
+	}
+
+	return data, err
+}
+
+// ExecutionView returns details of an execution (GET m=execution&f=view&executionID=<id>).
+func (c *Client) ExecutionView(ctx context.Context, executionID string) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution view: executionID is required", ErrValidation)
+	}
+	params := Params{"executionID": {executionID}}
+	return c.call(ctx, http.MethodGet, "execution", "view", params)
+}
+
+// ExecutionCreateParams returns parameters and metadata needed to create an execution (m=execution&f=create&projectID=<id>).
+func (c *Client) ExecutionCreateParams(ctx context.Context, projectID string) (json.RawMessage, error) {
+	params := Params{}
+	if projectID != "" {
+		params.Set("projectID", projectID)
+	}
+	return c.call(ctx, http.MethodGet, "execution", "create", params)
+}
+
+// ExecutionCreate creates an execution (POST m=execution&f=create&projectID=<id>). Common fields:
+// project, name, code, begin, end, days, team, type, status, acl, PM, PO, QD, RD, desc, pri.
+func (c *Client) ExecutionCreate(ctx context.Context, params Params) (json.RawMessage, error) {
+	projectID := params.Get("project")
+	if projectID == "" {
+		projectID = params.Get("projectID")
+	}
+	if projectID == "" {
+		projectID = "0"
+	}
+	return c.callRoute(ctx, http.MethodPost, "execution", "create", routeParam{Key: "projectID", Value: projectID}, params)
+}
+
+// ExecutionEditParams returns parameters and metadata needed to edit an execution (m=execution&f=edit&executionID=<id>).
+func (c *Client) ExecutionEditParams(ctx context.Context, executionID string) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution edit params: executionID is required", ErrValidation)
+	}
+	params := Params{"executionID": {executionID}}
+	return c.call(ctx, http.MethodGet, "execution", "edit", params)
+}
+
+// ExecutionEdit updates an execution (POST m=execution&f=edit&executionID=<id>).
+func (c *Client) ExecutionEdit(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution edit: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "execution", "edit", routeParam{Key: "executionID", Value: executionID}, params)
+}
+
+// ExecutionStart starts an execution (POST m=execution&f=start&executionID=<id>).
+func (c *Client) ExecutionStart(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution start: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "execution", "start", routeParam{Key: "executionID", Value: executionID}, params)
+}
+
+// ExecutionSuspend suspends an execution (POST m=execution&f=suspend&executionID=<id>).
+func (c *Client) ExecutionSuspend(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution suspend: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	data, err := c.callRoute(ctx, http.MethodPost, "execution", "suspend", routeParam{Key: "executionID", Value: executionID}, params)
+	if err != nil && isModuleOrMethodError(err) {
+		return c.callRoute(ctx, http.MethodPost, "execution", "putoff", routeParam{Key: "executionID", Value: executionID}, params)
+	}
+	return data, err
+}
+
+// ExecutionActivate activates a suspended or closed execution (POST m=execution&f=activate&executionID=<id>).
+func (c *Client) ExecutionActivate(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution activate: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "execution", "activate", routeParam{Key: "executionID", Value: executionID}, params)
+}
+
+// ExecutionClose closes an execution (POST m=execution&f=close&executionID=<id>).
+func (c *Client) ExecutionClose(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution close: --id is required", ErrValidation)
+	}
+	if params == nil {
+		params = Params{}
+	}
+	return c.callRoute(ctx, http.MethodPost, "execution", "close", routeParam{Key: "executionID", Value: executionID}, params)
+}
+
+// ExecutionDelete deletes an execution (GET/POST m=execution&f=delete&executionID=<id>&confirm=yes).
+func (c *Client) ExecutionDelete(ctx context.Context, executionID string) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution delete: executionID is required", ErrValidation)
+	}
+	params := Params{
+		"executionID": {executionID},
+		"confirm":     {"yes"},
+	}
+	return c.call(ctx, http.MethodGet, "execution", "delete", params)
+}
+
+// ExecutionTask returns tasks under an execution (GET m=execution&f=task&executionID=<id>).
+func (c *Client) ExecutionTask(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution task: executionID is required", ErrValidation)
+	}
+	defaults := Params{
+		"executionID": {executionID},
+		"status":      {"all"},
+		"param":       {"0"},
+		"orderBy":     {"id_desc"},
+		"recTotal":    {"999999"},
+		"recPerPage":  {"999999"},
+	}
+	merged := mergeDefaults(params, defaults)
+	merged.Set("executionID", executionID)
+	return c.call(ctx, http.MethodGet, "execution", "task", merged)
+}
+
+// ExecutionStory returns stories linked to an execution (GET m=execution&f=story&executionID=<id>).
+func (c *Client) ExecutionStory(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution story: executionID is required", ErrValidation)
+	}
+	storyType := params.Get("storyType")
+	if storyType == "" {
+		storyType = "story"
+	}
+	orderBy := params.Get("orderBy")
+	if orderBy == "" {
+		orderBy = "order_desc"
+	}
+	storyFilterType := params.Get("type")
+	if storyFilterType == "" {
+		storyFilterType = "all"
+	}
+	defaults := Params{
+		"executionID": {executionID},
+		"storyType":   {storyType},
+		"orderBy":     {orderBy},
+		"type":        {storyFilterType},
+		"param":       {"0"},
+		"recTotal":    {"999999"},
+		"recPerPage":  {"999999"},
+		"pageID":      {"1"},
+	}
+	merged := mergeDefaults(params, defaults)
+	merged.Set("executionID", executionID)
+	merged.Set("storyType", storyType)
+	merged.Set("orderBy", orderBy)
+	merged.Set("type", storyFilterType)
+	return c.call(ctx, http.MethodGet, "execution", "story", merged)
+}
+
+// ExecutionBug returns bugs linked to an execution (GET m=execution&f=bug&executionID=<id>).
+func (c *Client) ExecutionBug(ctx context.Context, executionID string, params Params) (json.RawMessage, error) {
+	if executionID == "" {
+		return nil, fmt.Errorf("%w: execution bug: executionID is required", ErrValidation)
+	}
+	productID := params.Get("productID")
+	if productID == "" {
+		productID = params.Get("product")
+	}
+	if productID == "" {
+		productID = "0"
+	}
+	branch := params.Get("branch")
+	if branch == "" {
+		branch = "all"
+	}
+	orderBy := params.Get("orderBy")
+	if orderBy == "" {
+		orderBy = "status,id_desc"
+	}
+	build := params.Get("build")
+	bugType := params.Get("type")
+	if bugType == "" {
+		bugType = "all"
+	}
+	defaults := Params{
+		"executionID": {executionID},
+		"productID":   {productID},
+		"branch":      {branch},
+		"orderBy":     {orderBy},
+		"build":       {build},
+		"type":        {bugType},
+		"param":       {"0"},
+		"recTotal":    {"999999"},
+		"recPerPage":  {"999999"},
+		"pageID":      {"1"},
+	}
+	merged := mergeDefaults(params, defaults)
+	merged.Set("executionID", executionID)
+	merged.Set("productID", productID)
+	merged.Set("branch", branch)
+	merged.Set("orderBy", orderBy)
+	merged.Set("build", build)
+	merged.Set("type", bugType)
+	return c.call(ctx, http.MethodGet, "execution", "bug", merged)
+}
+
 // ---- Task ----
 
 // TaskList returns tasks of a project/execution.
