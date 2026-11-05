@@ -241,6 +241,10 @@ func unwrapResponse(body []byte) (json.RawMessage, error) {
 		return nil, apiError(errMsg)
 	}
 
+	if isPasswordChangePage(env) || innerIsPasswordChangePage(env.Data) {
+		return nil, authError("password change required: open ZenTao in a browser and change your password before retrying")
+	}
+
 	if isLoginPage(env) {
 		return nil, authError("session expired or login required (redirected to user login)")
 	}
@@ -312,6 +316,19 @@ func extractFailMessage(env rawEnvelope) string {
 		errMsg = "operation failed"
 	}
 	return errMsg
+}
+
+func isPasswordChangePage(env rawEnvelope) bool {
+	return env.Title == "地盘-修改密码" || env.Title == "My-Change Password"
+}
+
+func innerIsPasswordChangePage(data json.RawMessage) bool {
+	payload, err := decodeData(data)
+	if err != nil {
+		return false
+	}
+	var inner rawEnvelope
+	return json.Unmarshal(payload, &inner) == nil && isPasswordChangePage(inner)
 }
 
 func isLoginPage(env rawEnvelope) bool {
